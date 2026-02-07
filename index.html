@@ -1,11 +1,38 @@
 <!DOCTYPE html>
+<!-- v2026-02-05-1 -->
 <html>
   <head>
     <meta charset="UTF-8">
-    <title>LLCGS Search UI</title>
+    <title>LLCGS Search</title>
+
+    <?!= include('Styles'); ?>
+
+    <!-- PDF.js (Apps Script–compatible version) -->
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/pdf.js/2.16.105/pdf.min.js"></script>
+    <script>
+      // Apps Script sandbox blocks workers — use fake worker mode
+      pdfjsLib.GlobalWorkerOptions.workerSrc = null;
+    </script>
+
+    <!-- Define BASE_URL for Search.html -->
+    <script>
+      const BASE_URL = "https://script.google.com/macros/s/AKfycbxZjgQ6vvTBT5AaEHHFVntyn3ubc8uJRDQKnUZAbrLglH_i7b1dSdmw7o0NnbDMTXBNXg/exec";
+      // Example:
+      // const BASE_URL = "https://script.google.com/macros/s/AKfycb12345/exec";
+    </script>
   </head>
+
   <body>
-    <h1>LLCGS Search UI — Placeholder</h1>
-    <p>This page will be replaced with the real search interface.</p>
+    <h1>LLCGS Neighborhood Search</h1>
+
+    <div id="searchControls">
+      <input type="text" id="searchBox" placeholder="Enter search terms">
+      <button id="searchButton">Search</button>
+      <select id="neighborhoodFilter"></select>
+    </div>
+
+    <div id="results"></div>
+
+    <?!= include('Search'); ?>
   </body>
 </html>
