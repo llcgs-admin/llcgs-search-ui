@@ -1,0 +1,90 @@
+<!-- v2026-02-05-1 -->
+<style>
+  body {
+    font-family: Arial, sans-serif;
+    margin: 20px;
+  }
+
+  h1 {
+    margin-bottom: 20px;
+  }
+
+  #searchControls {
+    margin-bottom: 20px;
+  }
+
+  #searchBox {
+    width: 300px;
+    padding: 6px;
+    font-size: 14px;
+  }
+
+  #searchButton {
+    padding: 6px 12px;
+    font-size: 14px;
+    margin-left: 6px;
+  }
+
+  #neighborhoodFilter {
+    margin-left: 10px;
+    padding: 6px;
+    font-size: 14px;
+  }
+
+  .result {
+    border: 1px solid #ccc;
+    padding: 12px;
+    margin-bottom: 20px;
+    border-radius: 6px;
+  }
+
+  .snippet {
+    background: #f7f7f7;
+    padding: 8px;
+    margin: 6px 0;
+    border-radius: 4px;
+    cursor: pointer;
+  }
+
+  .snippet:hover {
+    background: #eee;
+  }
+
+  .snippet-toggle {
+    margin-bottom: 10px;
+    padding: 4px 10px;
+    font-size: 13px;
+  }
+
+  .result.expanded .snippet {
+    display: block;
+  }
+
+  .pdf-viewer-container {
+    display: none;
+    margin-top: 15px;
+    border: 1px solid #aaa;
+    padding: 10px;
+    border-radius: 6px;
+    max-height: 600px;
+    overflow-y: auto;
+    background: #fafafa;
+  }
+
+  .pdf-viewer-canvas {
+    width: 100%;
+    border: 1px solid #ccc;
+    margin-bottom: 10px;
+  }
+
+  .pdf-page-label {
+    font-size: 13px;
+    color: #555;
+    margin-bottom: 10px;
+  }
+
+  mark {
+    background: yellow;
+    padding: 0 2px;
+  }
+</style>
