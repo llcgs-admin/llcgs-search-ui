@@ -1,5 +1,5 @@
 import { API_BASE } from './config.js';
-
+let indexData = null;
 let INDEX = null;
 
 /************************************************************
