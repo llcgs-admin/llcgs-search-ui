@@ -6,29 +6,20 @@ let INDEX = null;
  * LOAD INDEX FROM APPS SCRIPT
  ************************************************************/
 async function loadIndex() {
-  const status = document.getElementById('status');
-  status.textContent = 'Loading index…';
-
   try {
-    const res = await fetch(`${API_BASE}?action=index`);
-    if (!res.ok) throw new Error(`HTTP ${res.status}`);
+    const response = await fetch('data/index.json');
+    if (!response.ok) {
+      throw new Error(`Failed to load index.json: ${response.status}`);
+    }
 
-    const raw = await res.json();
-
-    // Convert dictionary → array
-    INDEX = Object.entries(raw).map(([id, rec]) => ({
-      id,
-      title: rec.title || id,
-      box: rec.box || null,
-      pdf_path: rec.pdf_path || null,
-      file_id: rec.file_id || null,
-      text: rec.text || ""
-    }));
-
-    status.textContent = `Index loaded (${INDEX.length} records).`;
+    const data = await response.json();
+    console.log(`Loaded ${Object.keys(data).length} index records.`);
+    return data;
 
   } catch (err) {
-    status.textContent = 'Error loading index: ' + err.message;
+    console.error('Error loading index.json:', err);
+    alert('Unable to load the search index. Please try again later.');
+    return null;
   }
 }
 
