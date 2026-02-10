@@ -82,6 +82,24 @@ h1, h2, h3 {
   text-decoration: underline;
 }
 
+#viewer-header {
+  padding: 10px;
+  background: #f5f5f5;
+  border-bottom: 1px solid #ddd;
+}
+
+#backBtn {
+  background: #eee;
+  border: 1px solid #ccc;
+  padding: 6px 12px;
+  border-radius: 4px;
+  cursor: pointer;
+  font-size: 14px;
+}
+
+#backBtn:hover {
+  background: #e0e0e0;
+}
 
 /* ---------------------------------------------------------
    Utility
