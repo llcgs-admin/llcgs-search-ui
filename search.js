@@ -101,7 +101,73 @@ document.getElementById('query').addEventListener('keydown', e => {
     document.getElementById('searchBtn').click();
   }
 });
+  function renderResults(results) {
+  const container = document.getElementById('results');
+  container.innerHTML = '';
 
+  if (!results.length) {
+    container.textContent = 'No results.';
+    return;
+  }
+
+  for (const rec of results) {
+
+    // Create the result wrapper
+    const resultDiv = document.createElement('div');
+    resultDiv.className = 'result';
+
+    // Title
+    const title = document.createElement('div');
+    title.className = 'result-title';
+    title.textContent = rec.title;
+    resultDiv.appendChild(title);
+
+    // Snippet (simple version)
+    const snippet = document.createElement('div');
+    snippet.className = 'result-snippet';
+    snippet.textContent = rec.text.slice(0, 200) + '...';
+    resultDiv.appendChild(snippet);
+
+    // "Open PDF" link
+    const link = document.createElement('a');
+    link.href = `pdfviewer.html?id=${encodeURIComponent(rec.file_id)}`;
+    link.textContent = 'Open PDF';
+
+    // Inline viewer container
+    const viewer = document.createElement('div');
+    viewer.className = 'pdf-inline-viewer';
+    viewer.id = `viewer-${rec.file_id}`;
+    viewer.innerHTML = `
+      <iframe class="pdf-frame"></iframe>
+    `;
+
+    // Toggle inline viewer
+    link.addEventListener('click', e => {
+      e.preventDefault();
+
+      const iframe = viewer.querySelector('.pdf-frame');
+
+      if (!viewer.dataset.loaded) {
+        iframe.src = `https://drive.google.com/file/d/${rec.file_id}/preview`;
+        viewer.dataset.loaded = "true";
+      }
+
+      viewer.style.display =
+        viewer.style.display === 'none' ? 'block' : 'none';
+
+      if (viewer.style.display === 'block') {
+        viewer.scrollIntoView({ behavior: 'smooth', block: 'start' });
+      }
+    });
+
+    // Append link + viewer to result block
+    resultDiv.appendChild(link);
+    resultDiv.appendChild(viewer);
+
+    // Add result block to container
+    container.appendChild(resultDiv);
+  }
+}
 /************************************************************
  * INITIALIZE INDEX
  ************************************************************/
