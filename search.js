@@ -69,6 +69,8 @@ function renderResults(results) {
     const link = document.createElement('a');
     link.href = `pdfviewer.html?id=${encodeURIComponent(rec.file_id)}`;
     link.textContent = 'Open PDF';
+    link.target = "_blank";   // <-- this forces a new tab
+
     resultDiv.appendChild(link);
 
     container.appendChild(resultDiv);
