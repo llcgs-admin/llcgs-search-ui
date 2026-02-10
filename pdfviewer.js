@@ -12,16 +12,15 @@
   <iframe id="viewer" width="100%" height="100%" frameborder="0"></iframe>
 
   <script type="module">
-    import { API_BASE } from './config.js';
-
     const params = new URLSearchParams(window.location.search);
     const id = params.get('id');
 
     if (!id) {
       document.body.textContent = 'Missing PDF id.';
     } else {
-      const url = `${API_BASE}?action=pdf&id=${encodeURIComponent(id)}`;
-      document.getElementById('viewer').src = url;
+      // Direct Google Drive PDF URL
+      const pdfUrl = `https://drive.google.com/uc?export=download&id=${encodeURIComponent(id)}`;
+      document.getElementById('viewer').src = pdfUrl;
     }
   </script>
 </body>
