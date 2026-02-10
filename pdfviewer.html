@@ -5,11 +5,21 @@
   <title>PDF Viewer</title>
   <meta name="viewport" content="width=device-width, initial-scale=1">
   <style>
-    html, body, #viewer { margin:0; padding:0; height:100%; }
+    html, body { margin:0; padding:0; height:100%; }
+    #pdf-container { height:100%; overflow:auto; background:#444; }
+    canvas { display:block; margin:0 auto; }
   </style>
+
+  <!-- PDF.js -->
+  <script src="https://cdnjs.cloudflare.com/ajax/libs/pdf.js/2.16.105/pdf.min.js"></script>
+  <script>
+    pdfjsLib.GlobalWorkerOptions.workerSrc =
+      "https://cdnjs.cloudflare.com/ajax/libs/pdf.js/2.16.105/pdf.worker.min.js";
+  </script>
 </head>
+
 <body>
-  <iframe id="viewer" width="100%" height="100%" frameborder="0"></iframe>
+  <div id="pdf-container"></div>
 
   <script type="module">
     const params = new URLSearchParams(window.location.search);
@@ -17,11 +27,31 @@
 
     if (!id) {
       document.body.textContent = 'Missing PDF id.';
-    } else {
-      // Direct Google Drive PDF URL
-      const pdfUrl = `https://drive.google.com/uc?export=download&id=${encodeURIComponent(id)}`;
-      document.getElementById('viewer').src = pdfUrl;
+      throw new Error("Missing PDF id");
     }
+
+    // Direct-download URL from Google Drive
+    const pdfUrl = `https://drive.google.com/uc?export=download&id=${encodeURIComponent(id)}`;
+
+    // Load PDF
+    pdfjsLib.getDocument(pdfUrl).promise.then(pdf => {
+      // Render first page for now
+      pdf.getPage(1).then(page => {
+        const viewport = page.getViewport({ scale: 1.5 });
+        const canvas = document.createElement('canvas');
+        const ctx = canvas.getContext('2d');
+
+        canvas.width = viewport.width;
+        canvas.height = viewport.height;
+
+        document.getElementById('pdf-container').appendChild(canvas);
+
+        page.render({ canvasContext: ctx, viewport });
+      });
+    }).catch(err => {
+      document.body.textContent = 'Failed to load PDF.';
+      console.error(err);
+    });
   </script>
 </body>
 </html>
