@@ -13,7 +13,7 @@ async function loadIndex() {
     }
 
     const data = await response.json();
-    console.log(`Loaded ${Object.keys(data).length} index records.`);
+    console.log(`Index loaded (${Object.keys(data).length} records).`);
     return data;
 
   } catch (err) {
