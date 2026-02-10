@@ -90,4 +90,7 @@ document.getElementById('query').addEventListener('keydown', e => {
   }
 });
 
-loadIndex();
+loadIndex().then(data => {
+  indexData = data;
+  // any additional setup
+});
