@@ -4,13 +4,40 @@
   <meta charset="utf-8">
   <title>PDF Viewer</title>
   <meta name="viewport" content="width=device-width, initial-scale=1">
+
   <style>
-    html, body { margin:0; padding:0; height:100%; }
-    #pdf-container { height:100%; overflow:auto; background:#444; }
-    canvas { display:block; margin:0 auto; }
+    html, body {
+      margin: 0;
+      padding: 0;
+      height: 100%;
+      background: #333;
+      color: white;
+      font-family: sans-serif;
+    }
+
+    #pdf-container {
+      height: 100%;
+      overflow-y: auto;
+      text-align: center;
+      padding-top: 10px;
+    }
+
+    canvas {
+      margin: 0 auto 20px auto;
+      background: white;
+      display: block;
+      box-shadow: 0 0 8px rgba(0,0,0,0.5);
+    }
+
+    #error {
+      padding: 20px;
+      text-align: center;
+      color: #ff8080;
+      font-size: 1.2em;
+    }
   </style>
 
-  <!-- PDF.js -->
+  <!-- PDF.js core library -->
   <script src="https://cdnjs.cloudflare.com/ajax/libs/pdf.js/2.16.105/pdf.min.js"></script>
   <script>
     pdfjsLib.GlobalWorkerOptions.workerSrc =
@@ -20,22 +47,23 @@
 
 <body>
   <div id="pdf-container"></div>
+  <div id="error"></div>
 
   <script type="module">
     const params = new URLSearchParams(window.location.search);
     const id = params.get('id');
 
     if (!id) {
-      document.body.textContent = 'Missing PDF id.';
+      document.getElementById('error').textContent = "Missing PDF id.";
       throw new Error("Missing PDF id");
     }
 
-    // Direct-download URL from Google Drive
-    const pdfUrl = `https://drive.google.com/uc?export=download&id=${encodeURIComponent(id)}`;
+    // Google Drive preview URL (works with PDF.js)
+    const pdfUrl = `https://drive.google.com/file/d/${id}/preview`;
 
     // Load PDF
-    pdfjsLib.getDocument(pdfUrl).promise.then(pdf => {
-      // Render first page for now
+    pdfjsLib.getDocument({ url: pdfUrl }).promise.then(pdf => {
+      // Render page 1 for now
       pdf.getPage(1).then(page => {
         const viewport = page.getViewport({ scale: 1.5 });
         const canvas = document.createElement('canvas');
@@ -49,8 +77,9 @@
         page.render({ canvasContext: ctx, viewport });
       });
     }).catch(err => {
-      document.body.textContent = 'Failed to load PDF.';
       console.error(err);
+      document.getElementById('error').textContent =
+        "Failed to load PDF. (Drive may be returning HTML instead of a PDF stream.)";
     });
   </script>
 </body>
