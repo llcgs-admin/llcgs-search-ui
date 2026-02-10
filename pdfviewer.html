@@ -21,7 +21,7 @@
 
 <body>
   <div id="viewer-header">
-    <button id="backBtn">← Back to Results</button>
+    <button id="backBtn">← Back to Search</button>
   </div>
   <iframe id="viewer"></iframe>
 
@@ -36,15 +36,9 @@
       document.getElementById('viewer').src = url;
     }
   </script>
-  <script>
+<script>
   document.getElementById('backBtn').addEventListener('click', () => {
-    // If the viewer was opened in a new tab, this closes it.
-    if (window.opener) {
-      window.close();
-    } else {
-      // Fallback: navigate back to the search page.
-      window.location.href = 'index.html';
-    }
+    window.location.href = 'index.html';
   });
 </script>
 
