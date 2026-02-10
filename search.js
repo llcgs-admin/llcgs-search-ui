@@ -96,4 +96,4 @@ document.getElementById('query').addEventListener('keydown', e => {
 loadIndex().then(data => {
   INDEX = Object.values(data);
 });
-);
+
