@@ -1,9 +1,9 @@
 import { API_BASE } from './config.js';
-let indexData = null;
+
 let INDEX = null;
 
 /************************************************************
- * LOAD INDEX FROM APPS SCRIPT
+ * LOAD INDEX (static JSON from GitHub Pages)
  ************************************************************/
 async function loadIndex() {
   try {
@@ -14,20 +14,23 @@ async function loadIndex() {
 
     const data = await response.json();
     console.log(`Index loaded (${Object.keys(data).length} records).`);
-    return data;
+
+    // Convert object → array
+    return Object.values(data);
 
   } catch (err) {
     console.error('Error loading index.json:', err);
     alert('Unable to load the search index. Please try again later.');
-    return null;
+    return [];
   }
 }
 
 /************************************************************
- * SIMPLE SEARCH (we will enhance this later)
+ * SIMPLE SEARCH
  ************************************************************/
 function searchIndex(query) {
   if (!INDEX) return [];
+
   const q = query.trim().toLowerCase();
   if (!q) return [];
 
@@ -50,41 +53,81 @@ function renderResults(results) {
   }
 
   for (const rec of results) {
-   // Create "Open PDF" link
-const link = document.createElement('a');
-link.href = `pdfviewer.html?id=${encodeURIComponent(rec.file_id)}`;
-link.textContent = 'Open PDF';
 
-// Inline viewer container
-const viewer = document.createElement('div');
-viewer.className = 'pdf-inline-viewer';
-viewer.id = `viewer-${rec.file_id}`;
-viewer.innerHTML = `
-  <iframe class="pdf-frame"></iframe>
-`;
+    /***********************
+     * Result wrapper
+     ***********************/
+    const resultDiv = document.createElement('div');
+    resultDiv.className = 'result';
 
-// Toggle inline viewer
-link.addEventListener('click', e => {
-  e.preventDefault();
+    /***********************
+     * Title
+     ***********************/
+    const title = document.createElement('div');
+    title.className = 'result-title';
+    title.textContent = rec.title;
+    resultDiv.appendChild(title);
 
-  const iframe = viewer.querySelector('.pdf-frame');
+    /***********************
+     * Snippet
+     ***********************/
+    const snippet = document.createElement('div');
+    snippet.className = 'result-snippet';
+    snippet.textContent = rec.text.slice(0, 200) + '…';
+    resultDiv.appendChild(snippet);
 
-  if (!viewer.dataset.loaded) {
-    iframe.src = `https://drive.google.com/file/d/${rec.file_id}/preview`;
-    viewer.dataset.loaded = "true";
+    /***********************
+     * "Open PDF" link
+     ***********************/
+    const link = document.createElement('a');
+    link.href = `pdfviewer.html?id=${encodeURIComponent(rec.file_id)}`;
+    link.textContent = 'Open PDF';
+
+    /***********************
+     * Inline PDF viewer
+     ***********************/
+    const viewer = document.createElement('div');
+    viewer.className = 'pdf-inline-viewer';
+    viewer.id = `viewer-${rec.file_id}`;
+    viewer.innerHTML = `
+      <iframe class="pdf-frame"></iframe>
+    `;
+
+    /***********************
+     * Toggle inline viewer
+     ***********************/
+    link.addEventListener('click', e => {
+      e.preventDefault();
+
+      const iframe = viewer.querySelector('.pdf-frame');
+
+      // Lazy-load Drive preview
+      if (!viewer.dataset.loaded) {
+        iframe.src = `https://drive.google.com/file/d/${rec.file_id}/preview`;
+        viewer.dataset.loaded = "true";
+      }
+
+      // Toggle visibility
+      viewer.style.display =
+        viewer.style.display === 'none' ? 'block' : 'none';
+
+      // Scroll into view when opened
+      if (viewer.style.display === 'block') {
+        viewer.scrollIntoView({ behavior: 'smooth', block: 'start' });
+      }
+    });
+
+    /***********************
+     * Append to result block
+     ***********************/
+    resultDiv.appendChild(link);
+    resultDiv.appendChild(viewer);
+
+    /***********************
+     * Add to container
+     ***********************/
+    container.appendChild(resultDiv);
   }
-
-  viewer.style.display =
-    viewer.style.display === 'none' ? 'block' : 'none';
-
-  if (viewer.style.display === 'block') {
-    viewer.scrollIntoView({ behavior: 'smooth', block: 'start' });
-  }
-});
-
-// Append to result block
-resultDiv.appendChild(link);
-resultDiv.appendChild(viewer);
 }
 
 /************************************************************
@@ -101,77 +144,10 @@ document.getElementById('query').addEventListener('keydown', e => {
     document.getElementById('searchBtn').click();
   }
 });
-  function renderResults(results) {
-  const container = document.getElementById('results');
-  container.innerHTML = '';
 
-  if (!results.length) {
-    container.textContent = 'No results.';
-    return;
-  }
-
-  for (const rec of results) {
-
-    // Create the result wrapper
-    const resultDiv = document.createElement('div');
-    resultDiv.className = 'result';
-
-    // Title
-    const title = document.createElement('div');
-    title.className = 'result-title';
-    title.textContent = rec.title;
-    resultDiv.appendChild(title);
-
-    // Snippet (simple version)
-    const snippet = document.createElement('div');
-    snippet.className = 'result-snippet';
-    snippet.textContent = rec.text.slice(0, 200) + '...';
-    resultDiv.appendChild(snippet);
-
-    // "Open PDF" link
-    const link = document.createElement('a');
-    link.href = `pdfviewer.html?id=${encodeURIComponent(rec.file_id)}`;
-    link.textContent = 'Open PDF';
-
-    // Inline viewer container
-    const viewer = document.createElement('div');
-    viewer.className = 'pdf-inline-viewer';
-    viewer.id = `viewer-${rec.file_id}`;
-    viewer.innerHTML = `
-      <iframe class="pdf-frame"></iframe>
-    `;
-
-    // Toggle inline viewer
-    link.addEventListener('click', e => {
-      e.preventDefault();
-
-      const iframe = viewer.querySelector('.pdf-frame');
-
-      if (!viewer.dataset.loaded) {
-        iframe.src = `https://drive.google.com/file/d/${rec.file_id}/preview`;
-        viewer.dataset.loaded = "true";
-      }
-
-      viewer.style.display =
-        viewer.style.display === 'none' ? 'block' : 'none';
-
-      if (viewer.style.display === 'block') {
-        viewer.scrollIntoView({ behavior: 'smooth', block: 'start' });
-      }
-    });
-
-    // Append link + viewer to result block
-    resultDiv.appendChild(link);
-    resultDiv.appendChild(viewer);
-
-    // Add result block to container
-    container.appendChild(resultDiv);
-  }
-}
 /************************************************************
- * INITIALIZE INDEX
+ * INITIALIZE
  ************************************************************/
 loadIndex().then(data => {
-  INDEX = Object.values(data);
+  INDEX = data;
 });
-
