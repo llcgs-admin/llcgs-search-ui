@@ -82,26 +82,6 @@ h1, h2, h3 {
   text-decoration: underline;
 }
 
-/* ---------------------------------------------------------
-   Inline PDF Viewer
---------------------------------------------------------- */
-
-.pdf-inline-viewer {
-  display: none;              /* Hidden until toggled */
-  margin-top: 12px;
-  border: 1px solid #ccc;
-  background: #fafafa;
-  padding: 10px;
-  border-radius: 4px;
-}
-
-.pdf-inline-viewer iframe {
-  width: 100%;
-  height: 600px;
-  border: none;
-  background: #fff;
-  box-shadow: 0 0 6px rgba(0,0,0,0.2);
-}
 
 /* ---------------------------------------------------------
    Utility
