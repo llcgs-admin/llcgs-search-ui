@@ -68,45 +68,15 @@
   </div>
 
   <button id="openBtn">Open PDF</button>
-  <script>
-    // Extract file ID
-    const params = new URLSearchParams(window.location.search);
-    const fileId = params.get('id');
-  
-    // Display title
-    document.getElementById('pdfTitle').textContent = `Document: ${fileId}`;
-  
-    // Back button closes the popup
-    document.getElementById('backBtn').addEventListener('click', () => {
-      window.close();
-    });
-  
-    if (fileId) {
-      const driveUrl = `https://drive.google.com/file/d/${fileId}/preview`;
-  
-      // Step 1: Wait long enough for the popup to render
-      setTimeout(() => {
-  
-        // Step 2: Open the PDF popup
-        const width = 900;
-        const height = 700;
-        const left = (screen.width - width) / 2;
-        const top = (screen.height - height) / 2;
-  
-        window.open(
-          driveUrl,
-          'pdfPopup',
-          `width=${width},height=${height},left=${left},top=${top},resizable=yes,scrollbars=yes`
-        );
-  
-        // Step 3: Close the viewer popup AFTER the PDF popup opens
-        setTimeout(() => {
-          window.close();
-        }, 200);
-  
-      }, 500); // <-- This delay is the key
-    }
-  </script>
+ <script>
+  const params = new URLSearchParams(window.location.search);
+  const fileId = params.get('id');
+  document.getElementById('pdfTitle').textContent = `Document: ${fileId}`;
+
+  document.getElementById('backBtn').addEventListener('click', () => {
+    window.close();
+  });
+</script>
 
 </body>
 </html>
