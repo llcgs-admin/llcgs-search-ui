@@ -65,16 +65,25 @@ function parseQuery(raw) {
 
   let q = raw;
 
-  // Extract OR groups inside parentheses
-  const orRegex = /\(([^)]+)\)/g;
+  // Extract parentheses groups
+  const parenRegex = /\(([^)]+)\)/g;
   let match;
-  while ((match = orRegex.exec(raw)) !== null) {
-    const inside = match[1];
-    const parts = inside.split(/\s+OR\s+/i).map(s => s.trim()).filter(Boolean);
-    if (parts.length > 1) {
-      orGroups.push(parts);
+  while ((match = parenRegex.exec(raw)) !== null) {
+    const inside = match[1].trim();
+
+    // Detect OR inside the group (case-insensitive)
+    if (/ OR /i.test(inside)) {
+      // Split on OR with flexible spacing
+      const parts = inside.split(/OR/i).map(s => s.trim()).filter(Boolean);
+
+      if (parts.length > 1) {
+        orGroups.push(parts);
+        q = q.replace(match[0], ''); // remove only valid OR groups
+        continue;
+      }
     }
-    q = q.replace(match[0], ''); // remove OR group from main query
+
+    // If no OR detected, leave parentheses content in q
   }
 
   // Extract quoted phrases
@@ -88,7 +97,7 @@ function parseQuery(raw) {
   q.split(/\s+/).forEach(t => {
     if (!t) return;
 
-    // Ignore bare OR tokens (outside parentheses)
+    // Ignore bare OR tokens
     if (t.toUpperCase() === 'OR') return;
 
     if (t.startsWith('-"') && t.endsWith('"')) {
