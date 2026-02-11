@@ -1,110 +1,211 @@
-/* ---------------------------------------------------------
-   Global Layout
---------------------------------------------------------- */
+/************************************************************
+ * LLCGS COLOR PALETTE
+ ************************************************************/
+:root {
+  --llcgs-green: #2f4f2f;
+  --llcgs-green-dark: #244024;
+  --llcgs-gold: #c2a878;
+  --llcgs-cream: #f7f4e9;
+  --llcgs-charcoal: #333333;
+  --llcgs-border: #d8d2c4;
+}
 
+/************************************************************
+ * GLOBAL
+ ************************************************************/
 body {
   margin: 0;
-  padding: 20px;
-  font-family: system-ui, sans-serif;
-  background: #f5f5f5;
-  color: #222;
-  line-height: 1.5;
+  padding: 0;
+  background: var(--llcgs-cream);
+  color: var(--llcgs-charcoal);
+  font-family: "Verdana", "Arial", sans-serif;
 }
 
-h1, h2, h3 {
-  margin-top: 0;
-  font-weight: 600;
+/************************************************************
+ * HEADER
+ ************************************************************/
+#site-header {
+  background: var(--llcgs-green);
+  color: white;
+  padding: 20px 0;
+  text-align: center;
+  border-bottom: 4px solid var(--llcgs-gold);
 }
 
-/* ---------------------------------------------------------
-   Search Box
---------------------------------------------------------- */
+#site-header h1 {
+  font-family: "Georgia", serif;
+  margin: 0;
+  font-size: 2rem;
+}
 
-#search-container {
+#site-header .subtitle {
+  font-size: 1rem;
+  margin-top: 4px;
+  opacity: 0.9;
+}
+
+/************************************************************
+ * MAIN CONTAINER
+ ************************************************************/
+#main-container {
+  max-width: 900px;
+  margin: 20px auto;
+  background: white;
+  padding: 25px 30px;
+  border: 1px solid var(--llcgs-border);
+  border-radius: 6px;
+  box-shadow: 0 2px 6px rgba(0,0,0,0.05);
+}
+
+/************************************************************
+ * SEARCH CONTROLS
+ ************************************************************/
+#search-controls {
   margin-bottom: 20px;
 }
 
-#searchInput {
-  width: 70%;
-  max-width: 500px;
-  padding: 10px;
-  font-size: 1rem;
-  border: 1px solid #bbb;
+.control-label {
+  display: block;
+  margin-top: 12px;
+  margin-bottom: 4px;
+  font-weight: bold;
+  font-family: "Georgia", serif;
+  color: var(--llcgs-green);
+}
+
+input[type="text"],
+select {
+  width: 100%;
+  padding: 8px;
+  border: 1px solid var(--llcgs-border);
   border-radius: 4px;
+  font-size: 1rem;
+  background: #fff;
 }
 
 #searchBtn {
+  margin-top: 15px;
   padding: 10px 16px;
-  font-size: 1rem;
-  margin-left: 8px;
-  background: #0066cc;
+  background: var(--llcgs-green);
   color: white;
   border: none;
   border-radius: 4px;
   cursor: pointer;
+  font-size: 1rem;
 }
 
-#searchBtn:disabled {
-  background: #999;
-  cursor: not-allowed;
+#searchBtn:hover {
+  background: var(--llcgs-green-dark);
 }
 
-/* ---------------------------------------------------------
-   Search Results
---------------------------------------------------------- */
+/************************************************************
+ * RESULTS
+ ************************************************************/
+.result-header {
+  font-family: "Georgia", serif;
+  font-size: 1.1rem;
+  margin-bottom: 15px;
+  color: var(--llcgs-green);
+}
 
 .result {
+  border: 1px solid var(--llcgs-border);
   background: white;
-  border: 1px solid #ddd;
   padding: 15px;
   margin-bottom: 15px;
-  border-radius: 6px;
-  box-shadow: 0 1px 2px rgba(0,0,0,0.05);
+  border-radius: 4px;
 }
 
 .result-title {
-  font-size: 1.1rem;
-  font-weight: 600;
+  font-family: "Georgia", serif;
+  font-size: 1.25rem;
+  margin-bottom: 10px;
+  color: var(--llcgs-green);
+}
+
+/************************************************************
+ * PAGE GROUPS
+ ************************************************************/
+.page-header {
+  font-family: "Georgia", serif;
+  font-weight: bold;
+  margin-top: 10px;
+  cursor: pointer;
+  color: var(--llcgs-green);
+  display: flex;
+  align-items: center;
+}
+
+.page-header .arrow {
+  margin-right: 6px;
+  font-size: 0.9rem;
+}
+
+.page-block {
+  margin-left: 18px;
+  margin-top: 6px;
+}
+
+/************************************************************
+ * SNIPPETS
+ ************************************************************/
+.snippet {
   margin-bottom: 6px;
+  line-height: 1.4;
 }
 
-.result-snippet {
-  margin: 8px 0;
-  color: #444;
-}
-
-.result a {
-  color: #0066cc;
-  text-decoration: none;
-}
-
-.result a:hover {
-  text-decoration: underline;
-}
-
-#viewer-header {
-  padding: 10px;
-  background: #f5f5f5;
-  border-bottom: 1px solid #ddd;
-}
-
-#backBtn {
-  background: #eee;
-  border: 1px solid #ccc;
-  padding: 6px 12px;
+.snippet-toggle {
+  margin-top: 10px;
+  padding: 6px 10px;
+  background: var(--llcgs-gold);
+  border: 1px solid var(--llcgs-border);
   border-radius: 4px;
   cursor: pointer;
-  font-size: 14px;
+  font-size: 0.9rem;
 }
 
-#backBtn:hover {
-  background: #e0e0e0;
+.snippet-toggle:hover {
+  background: #b89c6c;
 }
 
-/* ---------------------------------------------------------
-   Utility
---------------------------------------------------------- */
+/************************************************************
+ * HIGHLIGHTING
+ ************************************************************/
+mark {
+  background: var(--llcgs-gold);
+  padding: 0 2px;
+  border-radius: 2px;
+}
 
-.hidden {
-  display: none;
+/************************************************************
+ * FOOTER
+ ************************************************************/
+#site-footer {
+  text-align: center;
+  padding: 20px 0;
+  margin-top: 30px;
+  background: var(--llcgs-green);
+  color: white;
+  border-top: 4px solid var(--llcgs-gold);
+}
+
+.footer-inner {
+  font-size: 0.9rem;
+}
+
+/************************************************************
+ * RESPONSIVE
+ ************************************************************/
+@media (max-width: 600px) {
+  #main-container {
+    padding: 15px 20px;
+  }
+
+  #site-header h1 {
+    font-size: 1.6rem;
+  }
+
+  .result-title {
+    font-size: 1.1rem;
+  }
 }
