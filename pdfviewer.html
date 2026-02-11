@@ -43,10 +43,19 @@
       text-overflow: ellipsis;
     }
 
-    #redirecting {
-      padding: 20px;
-      font-size: 16px;
-      color: #555;
+    #openBtn {
+      margin: 20px;
+      padding: 10px 16px;
+      font-size: 15px;
+      background: #4a8df6;
+      color: white;
+      border: none;
+      border-radius: 4px;
+      cursor: pointer;
+    }
+
+    #openBtn:hover {
+      background: #3a7be0;
     }
   </style>
 </head>
@@ -58,33 +67,27 @@
     <div id="pdfTitle"></div>
   </div>
 
-  <div id="redirecting">Opening PDF…</div>
+  <button id="openBtn">Open PDF</button>
 
-<script>
-  // Back button always returns to search page
-  document.getElementById('backBtn').addEventListener('click', () => {
-    window.location.href = 'index.html';
-  });
+  <script>
+    // Back button
+    document.getElementById('backBtn').addEventListener('click', () => {
+      window.location.href = 'index.html';
+    });
 
-  // Extract file ID
-  const params = new URLSearchParams(window.location.search);
-  const fileId = params.get('id');
+    // Extract file ID
+    const params = new URLSearchParams(window.location.search);
+    const fileId = params.get('id');
 
-  // Display a simple title
-  document.getElementById('pdfTitle').textContent = `Document: ${fileId}`;
+    // Display title
+    document.getElementById('pdfTitle').textContent = `Document: ${fileId}`;
 
-  // Delay redirect so header is visible
-  if (fileId) {
-    const driveUrl = `https://drive.google.com/file/d/${fileId}/preview`;
-
-    // Give the browser a moment to render the header
-    setTimeout(() => {
-      window.location.href = driveUrl;
-    }, 400); // 400ms is a sweet spot
-  } else {
-    document.getElementById('redirecting').textContent = "Missing file ID.";
-  }
-</script>
+    // Open PDF in Drive
+    document.getElementById('openBtn').addEventListener('click', () => {
+      const driveUrl = `https://drive.google.com/file/d/${fileId}/preview`;
+      window.open(driveUrl, '_blank');
+    });
+  </script>
 
 </body>
 </html>
