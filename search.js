@@ -109,7 +109,6 @@ link.addEventListener('click', e => {
     }
   }, 2500);
 });
-});
 
     resultDiv.appendChild(link);
 
