@@ -60,27 +60,31 @@
 
   <div id="redirecting">Opening PDF…</div>
 
-  <script>
-    // Back button always returns to search page
-    document.getElementById('backBtn').addEventListener('click', () => {
-      window.location.href = 'index.html';
-    });
+<script>
+  // Back button always returns to search page
+  document.getElementById('backBtn').addEventListener('click', () => {
+    window.location.href = 'index.html';
+  });
 
-    // Extract file ID
-    const params = new URLSearchParams(window.location.search);
-    const fileId = params.get('id');
+  // Extract file ID
+  const params = new URLSearchParams(window.location.search);
+  const fileId = params.get('id');
 
-    // Display a simple title
-    document.getElementById('pdfTitle').textContent = `Document: ${fileId}`;
+  // Display a simple title
+  document.getElementById('pdfTitle').textContent = `Document: ${fileId}`;
 
-    // Auto-redirect to Drive preview
-    if (fileId) {
-      const driveUrl = `https://drive.google.com/file/d/${fileId}/preview`;
+  // Delay redirect so header is visible
+  if (fileId) {
+    const driveUrl = `https://drive.google.com/file/d/${fileId}/preview`;
+
+    // Give the browser a moment to render the header
+    setTimeout(() => {
       window.location.href = driveUrl;
-    } else {
-      document.getElementById('redirecting').textContent = "Missing file ID.";
-    }
-  </script>
+    }, 400); // 400ms is a sweet spot
+  } else {
+    document.getElementById('redirecting').textContent = "Missing file ID.";
+  }
+</script>
 
 </body>
 </html>
