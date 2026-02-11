@@ -193,6 +193,8 @@ function buildSnippet(text, match, radius = 80) {
 }
 
 function highlightTerms(text, terms) {
+  if (!terms.length) return text;
+
   const escaped = terms.map(t => t.replace(/[.*+?^${}()|[\]\\]/g, "\\$&"));
   const regex = new RegExp(`\\b(${escaped.join("|")})\\b`, "gi");
   return text.replace(regex, m => `<mark>${m}</mark>`);
@@ -214,7 +216,11 @@ function renderResults(results, elapsedMs) {
 
   const rawQuery = document.getElementById('query').value.trim();
   const parsed = parseQuery(rawQuery);
-  const allTerms = [...parsed.terms, ...parsed.phrases, ...parsed.orGroups.flat()];
+  const allTerms = [
+    ...parsed.terms,
+    ...parsed.phrases,
+    ...parsed.orGroups.flat()
+  ];
 
   for (const rec of results) {
     const resultDiv = document.createElement('div');
@@ -248,7 +254,10 @@ function renderResults(results, elapsedMs) {
     const snippetContainer = document.createElement('div');
     snippetContainer.className = 'snippet-container';
 
-    let totalSnippets = pageGroups.reduce((sum, pg) => sum + pg.snippets.length, 0);
+    const totalSnippets = pageGroups.reduce(
+      (sum, pg) => sum + pg.snippets.length,
+      0
+    );
     let showingAll = false;
 
     pageGroups.forEach((pg, i) => {
@@ -303,7 +312,9 @@ function renderResults(results, elapsedMs) {
           a.textContent = showingAll ? '▼' : '▶';
         });
 
-        toggleBtn.textContent = showingAll ? 'Show fewer snippets' : 'Show all snippets';
+        toggleBtn.textContent = showingAll
+          ? 'Show fewer snippets'
+          : 'Show all snippets';
       });
 
       resultDiv.appendChild(toggleBtn);
@@ -346,7 +357,8 @@ function renderResults(results, elapsedMs) {
  ************************************************************/
 document.getElementById('searchBtn').addEventListener('click', () => {
   const q = document.getElementById('query').value;
-  const neighborhood = document.getElementById('neighborhoodFilter')?.value || null;
+  const neighborhood =
+    document.getElementById('neighborhoodFilter')?.value || null;
 
   const start = performance.now();
   const results = searchIndex(q, neighborhood);
