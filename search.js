@@ -81,9 +81,13 @@ function renderResults(results) {
       const left = (screen.width - width) / 2;
       const top = (screen.height - height) / 2;
 
+      const multi = document.getElementById('multiPopupToggle').checked;
+      
+      const windowName = multi ? '_blank' : 'pdfPopup';
+      
       window.open(
         viewerUrl,
-        'pdfPopup',
+        windowName,
         `width=${width},height=${height},left=${left},top=${top},resizable=yes,scrollbars=yes`
       );
     });
