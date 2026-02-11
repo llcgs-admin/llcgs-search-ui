@@ -61,10 +61,49 @@ function renderResults(results) {
     title.textContent = rec.title;
     resultDiv.appendChild(title);
 
-    const snippet = document.createElement('div');
-    snippet.className = 'result-snippet';
-    snippet.textContent = rec.text.slice(0, 200) + '…';
-    resultDiv.appendChild(snippet);
+// Snippet container
+const snippetContainer = document.createElement('div');
+snippetContainer.className = 'snippet-container';
+
+// Show first 3 snippets
+const snippets = rec.snippets || [];
+const initialSnippets = snippets.slice(0, 3);
+
+initialSnippets.forEach(sn => {
+  const snDiv = document.createElement('div');
+  snDiv.className = 'snippet';
+  snDiv.textContent = sn;
+  snippetContainer.appendChild(snDiv);
+});
+
+// Toggle button
+if (snippets.length > 3) {
+  const toggleBtn = document.createElement('button');
+  toggleBtn.className = 'snippet-toggle';
+  toggleBtn.textContent = 'Show all snippets';
+
+  let expanded = false;
+
+  toggleBtn.addEventListener('click', () => {
+    expanded = !expanded;
+    snippetContainer.innerHTML = '';
+
+    const toShow = expanded ? snippets : snippets.slice(0, 3);
+
+    toShow.forEach(sn => {
+      const snDiv = document.createElement('div');
+      snDiv.className = 'snippet';
+      snDiv.textContent = sn;
+      snippetContainer.appendChild(snDiv);
+    });
+
+    toggleBtn.textContent = expanded ? 'Show fewer snippets' : 'Show all snippets';
+  });
+
+  resultDiv.appendChild(toggleBtn);
+}
+
+resultDiv.appendChild(snippetContainer);
 
     const link = document.createElement('a');
     link.href = `pdfviewer.html?id=${encodeURIComponent(rec.file_id)}`;
