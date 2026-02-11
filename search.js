@@ -55,7 +55,7 @@ async function loadIndex() {
 }
 
 /************************************************************
- * QUERY PARSER WITH OR GROUPS
+ * QUERY PARSER WITH ROBUST OR GROUPS
  ************************************************************/
 function parseQuery(raw) {
   const phrases = [];
@@ -111,6 +111,7 @@ function parseQuery(raw) {
 
   return { phrases, terms, excluded, orGroups };
 }
+
 /************************************************************
  * SEARCH LOGIC
  ************************************************************/
@@ -245,4 +246,125 @@ function renderResults(results, elapsedMs) {
     });
 
     const snippetContainer = document.createElement('div');
-    snippetContainer
+    snippetContainer.className = 'snippet-container';
+
+    let totalSnippets = pageGroups.reduce((sum, pg) => sum + pg.snippets.length, 0);
+    let showingAll = false;
+
+    pageGroups.forEach((pg, i) => {
+      const pageHeader = document.createElement('div');
+      pageHeader.className = 'page-header';
+      pageHeader.textContent = `Page ${pg.page} (${pg.snippets.length} matches)`;
+
+      const arrow = document.createElement('span');
+      arrow.className = 'arrow';
+      arrow.textContent = i === 0 ? '▼' : '▶';
+      pageHeader.prepend(arrow);
+
+      const pageBlock = document.createElement('div');
+      pageBlock.className = 'page-block';
+      pageBlock.style.display = i === 0 ? 'block' : 'none';
+
+      pageHeader.addEventListener('click', () => {
+        const open = pageBlock.style.display === 'block';
+        pageBlock.style.display = open ? 'none' : 'block';
+        arrow.textContent = open ? '▶' : '▼';
+      });
+
+      pg.snippets.forEach(sn => {
+        const snDiv = document.createElement('div');
+        snDiv.className = 'snippet';
+        snDiv.innerHTML = sn;
+        pageBlock.appendChild(snDiv);
+      });
+
+      snippetContainer.appendChild(pageHeader);
+      snippetContainer.appendChild(pageBlock);
+    });
+
+    resultDiv.appendChild(snippetContainer);
+
+    /******** SHOW ALL / FEWER ********/
+    if (totalSnippets > 3) {
+      const toggleBtn = document.createElement('button');
+      toggleBtn.className = 'snippet-toggle';
+      toggleBtn.textContent = 'Show all snippets';
+
+      toggleBtn.addEventListener('click', () => {
+        showingAll = !showingAll;
+
+        const blocks = snippetContainer.querySelectorAll('.page-block');
+        blocks.forEach(block => {
+          block.style.display = showingAll ? 'block' : 'none';
+        });
+
+        const arrows = snippetContainer.querySelectorAll('.arrow');
+        arrows.forEach(a => {
+          a.textContent = showingAll ? '▼' : '▶';
+        });
+
+        toggleBtn.textContent = showingAll ? 'Show fewer snippets' : 'Show all snippets';
+      });
+
+      resultDiv.appendChild(toggleBtn);
+    }
+
+    /******** OPEN PDF LINK ********/
+    const link = document.createElement('a');
+    link.href = `pdfviewer.html?id=${encodeURIComponent(rec.file_id)}`;
+    link.textContent = 'Open PDF';
+
+    link.addEventListener('click', e => {
+      e.preventDefault();
+
+      const fileId = rec.file_id;
+      const viewerUrl = `pdfviewer.html?id=${encodeURIComponent(fileId)}`;
+
+      const width = 900;
+      const height = 700;
+      const left = (screen.width - width) / 2;
+      const top = (screen.height - height) / 2;
+
+      const multi = document.getElementById('multiPopupToggle').checked;
+      const windowName = multi ? '_blank' : 'pdfPopup';
+
+      window.open(
+        viewerUrl,
+        windowName,
+        `width=${width},height=${height},left=${left},top=${top},resizable=yes,scrollbars=yes`
+      );
+    });
+
+    resultDiv.appendChild(link);
+
+    container.appendChild(resultDiv);
+  }
+}
+
+/************************************************************
+ * EVENT HANDLERS
+ ************************************************************/
+document.getElementById('searchBtn').addEventListener('click', () => {
+  const q = document.getElementById('query').value;
+  const neighborhood = document.getElementById('neighborhoodFilter')?.value || null;
+
+  const start = performance.now();
+  const results = searchIndex(q, neighborhood);
+  const elapsed = Math.round(performance.now() - start);
+
+  renderResults(results, elapsed);
+});
+
+document.getElementById('query').addEventListener('keydown', e => {
+  if (e.key === 'Enter') {
+    document.getElementById('searchBtn').click();
+  }
+});
+
+/************************************************************
+ * INITIALIZE
+ ************************************************************/
+loadIndex().then(data => {
+  INDEX = data;
+  populateNeighborhoodDropdown();
+});
