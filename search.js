@@ -55,6 +55,14 @@ async function loadIndex() {
 }
 
 /************************************************************
+ * STRICT WHOLE-WORD MATCHING
+ ************************************************************/
+function makeWordRegex(term) {
+  const escaped = term.replace(/[.*+?^${}()|[\]\\]/g, "\\$&");
+  return new RegExp(`(?<![A-Za-z])${escaped}(?![A-Za-z])`, "i");
+}
+
+/************************************************************
  * QUERY PARSER WITH ROBUST OR GROUPS
  ************************************************************/
 function parseQuery(raw) {
@@ -73,7 +81,6 @@ function parseQuery(raw) {
 
     // Detect OR inside the group (case-insensitive)
     if (/ OR /i.test(inside)) {
-      // Split on OR with flexible spacing
       const parts = inside.split(/OR/i).map(s => s.trim()).filter(Boolean);
 
       if (parts.length > 1) {
@@ -82,8 +89,6 @@ function parseQuery(raw) {
         continue;
       }
     }
-
-    // If no OR detected, leave parentheses content in q
   }
 
   // Extract quoted phrases
@@ -113,26 +118,28 @@ function parseQuery(raw) {
 }
 
 /************************************************************
- * SEARCH LOGIC
+ * SEARCH LOGIC — STRICT WHOLE-WORD BOOLEAN MATCHING
  ************************************************************/
 function recordMatches(rec, parsed) {
   const hay = (rec.title + ' ' + rec.text).toLowerCase();
 
-  // Must include all phrases
+  // Phrases (substring OK, but must match whole phrase)
   for (const p of parsed.phrases) {
     if (!hay.includes(p.toLowerCase())) return false;
   }
 
-  // Must include all standalone terms
+  // Standalone terms (whole-word only)
   for (const t of parsed.terms) {
-    if (!hay.includes(t.toLowerCase())) return false;
+    const r = makeWordRegex(t);
+    if (!r.test(hay)) return false;
   }
 
-  // Must satisfy each OR group
+  // OR groups (at least one term must match whole-word)
   for (const group of parsed.orGroups) {
     let ok = false;
     for (const g of group) {
-      if (hay.includes(g.toLowerCase())) {
+      const r = makeWordRegex(g);
+      if (r.test(hay)) {
         ok = true;
         break;
       }
@@ -140,9 +147,10 @@ function recordMatches(rec, parsed) {
     if (!ok) return false;
   }
 
-  // Must NOT include excluded terms
+  // Excluded terms (whole-word)
   for (const ex of parsed.excluded) {
-    if (hay.includes(ex.toLowerCase())) return false;
+    const r = makeWordRegex(ex);
+    if (r.test(hay)) return false;
   }
 
   return true;
@@ -170,11 +178,11 @@ function findMatches(text, terms) {
   const lower = text.toLowerCase();
 
   terms.forEach(term => {
-    const t = term.toLowerCase();
-    let idx = lower.indexOf(t);
-    while (idx !== -1) {
-      matches.push({ index: idx, length: t.length });
-      idx = lower.indexOf(t, idx + t.length);
+    const r = makeWordRegex(term);
+    let match;
+    while ((match = r.exec(lower)) !== null) {
+      matches.push({ index: match.index, length: term.length });
+      r.lastIndex = match.index + term.length;
     }
   });
 
@@ -196,7 +204,8 @@ function highlightTerms(text, terms) {
   if (!terms.length) return text;
 
   const escaped = terms.map(t => t.replace(/[.*+?^${}()|[\]\\]/g, "\\$&"));
-  const regex = new RegExp(`\\b(${escaped.join("|")})\\b`, "gi");
+  const regex = new RegExp(`(?<![A-Za-z])(${escaped.join("|")})(?![A-Za-z])`, "gi");
+
   return text.replace(regex, m => `<mark>${m}</mark>`);
 }
 
@@ -216,11 +225,7 @@ function renderResults(results, elapsedMs) {
 
   const rawQuery = document.getElementById('query').value.trim();
   const parsed = parseQuery(rawQuery);
-  const allTerms = [
-    ...parsed.terms,
-    ...parsed.phrases,
-    ...parsed.orGroups.flat()
-  ];
+  const allTerms = [...parsed.terms, ...parsed.phrases, ...parsed.orGroups.flat()];
 
   for (const rec of results) {
     const resultDiv = document.createElement('div');
