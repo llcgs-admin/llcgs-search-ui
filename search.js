@@ -111,7 +111,6 @@ function parseQuery(raw) {
 
   return { phrases, terms, excluded, orGroups };
 }
-
 /************************************************************
  * SEARCH LOGIC
  ************************************************************/
