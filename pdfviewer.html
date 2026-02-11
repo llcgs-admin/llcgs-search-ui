@@ -68,26 +68,35 @@
   </div>
 
   <button id="openBtn">Open PDF</button>
+<script>
+  // Back button
+  document.getElementById('backBtn').addEventListener('click', () => {
+    window.location.href = 'index.html';
+  });
 
-  <script>
-    // Back button
-    document.getElementById('backBtn').addEventListener('click', () => {
-      window.location.href = 'index.html';
-    });
+  // Extract file ID
+  const params = new URLSearchParams(window.location.search);
+  const fileId = params.get('id');
 
-    // Extract file ID
-    const params = new URLSearchParams(window.location.search);
-    const fileId = params.get('id');
+  // Display title
+  document.getElementById('pdfTitle').textContent = `Document: ${fileId}`;
 
-    // Display title
-    document.getElementById('pdfTitle').textContent = `Document: ${fileId}`;
+  // Open PDF in a popup window
+  document.getElementById('openBtn').addEventListener('click', () => {
+    const driveUrl = `https://drive.google.com/file/d/${fileId}/preview`;
 
-    // Open PDF in Drive
-    document.getElementById('openBtn').addEventListener('click', () => {
-      const driveUrl = `https://drive.google.com/file/d/${fileId}/preview`;
-      window.open(driveUrl, '_blank');
-    });
-  </script>
+    const width = 900;
+    const height = 700;
+    const left = (screen.width - width) / 2;
+    const top = (screen.height - height) / 2;
+
+    window.open(
+      driveUrl,
+      'pdfPopup',
+      `width=${width},height=${height},left=${left},top=${top},resizable=yes,scrollbars=yes`
+    );
+  });
+</script>
 
 </body>
 </html>
