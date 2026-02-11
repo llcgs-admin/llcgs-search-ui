@@ -41,6 +41,19 @@
     window.location.href = 'index.html';
   });
 </script>
+<script>
+  // Back button behavior
+  document.getElementById('backBtn').addEventListener('click', () => {
+    window.location.href = 'index.html';
+  });
 
+  // Extract file ID from URL
+  const params = new URLSearchParams(window.location.search);
+  const fileId = params.get('id');
+
+  // Display a readable title
+  // If you want something fancier later, we can fetch metadata via Apps Script.
+  document.getElementById('pdfTitle').textContent = `Document: ${fileId}`;
+</script>
 </body>
 </html>
