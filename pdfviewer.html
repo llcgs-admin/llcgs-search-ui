@@ -81,26 +81,30 @@
       window.close();
     });
   
-    // Open PDF in its own popup
     if (fileId) {
       const driveUrl = `https://drive.google.com/file/d/${fileId}/preview`;
   
-      const width = 900;
-      const height = 700;
-      const left = (screen.width - width) / 2;
-      const top = (screen.height - height) / 2;
-  
-      // Give the header time to render
+      // Step 1: Wait long enough for the popup to render
       setTimeout(() => {
+  
+        // Step 2: Open the PDF popup
+        const width = 900;
+        const height = 700;
+        const left = (screen.width - width) / 2;
+        const top = (screen.height - height) / 2;
+  
         window.open(
           driveUrl,
           'pdfPopup',
           `width=${width},height=${height},left=${left},top=${top},resizable=yes,scrollbars=yes`
         );
   
-        // Close the viewer popup
-        window.close();
-      }, 300);
+        // Step 3: Close the viewer popup AFTER the PDF popup opens
+        setTimeout(() => {
+          window.close();
+        }, 200);
+  
+      }, 500); // <-- This delay is the key
     }
   </script>
 
