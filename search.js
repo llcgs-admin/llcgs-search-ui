@@ -69,19 +69,46 @@ function renderResults(results) {
     const link = document.createElement('a');
     link.href = `pdfviewer.html?id=${encodeURIComponent(rec.file_id)}`;
     link.textContent = 'Open PDF';
-    link.addEventListener('click', e => {
-      e.preventDefault();
-    
-      const width = 500;
-      const height = 200;
-      const left = (screen.width - width) / 2;
-      const top = (screen.height - height) / 2;
-    
-      window.open(
-        `pdfviewer.html?id=${encodeURIComponent(rec.file_id)}`,
-        'viewerPopup',
-        `width=${width},height=${height},left=${left},top=${top},resizable=no`
-      );
+link.addEventListener('click', e => {
+  e.preventDefault();
+
+  const fileId = rec.file_id;
+  const viewerUrl = `pdfviewer.html?id=${encodeURIComponent(fileId)}`;
+  const driveUrl = `https://drive.google.com/file/d/${fileId}/preview`;
+
+  // Sizes
+  const viewerWidth = 500;
+  const viewerHeight = 200;
+  const pdfWidth = 900;
+  const pdfHeight = 700;
+
+  // Centering
+  const viewerLeft = (screen.width - viewerWidth) / 2;
+  const viewerTop = (screen.height - viewerHeight) / 2;
+  const pdfLeft = (screen.width - pdfWidth) / 2;
+  const pdfTop = (screen.height - pdfHeight) / 2;
+
+  // 1. Open viewer popup
+  const viewerWin = window.open(
+    viewerUrl,
+    'viewerPopup',
+    `width=${viewerWidth},height=${viewerHeight},left=${viewerLeft},top=${viewerTop},resizable=no`
+  );
+
+  // 2. Open PDF popup
+  window.open(
+    driveUrl,
+    'pdfPopup',
+    `width=${pdfWidth},height=${pdfHeight},left=${pdfLeft},top=${pdfTop},resizable=yes,scrollbars=yes`
+  );
+
+  // 3. Close viewer popup (after it loads)
+  setTimeout(() => {
+    if (viewerWin && !viewerWin.closed) {
+      viewerWin.close();
+    }
+  }, 2500);
+});
 });
 
     resultDiv.appendChild(link);
