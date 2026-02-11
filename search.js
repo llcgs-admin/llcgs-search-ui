@@ -70,7 +70,7 @@ function parseQuery(raw) {
   let match;
   while ((match = orRegex.exec(raw)) !== null) {
     const inside = match[1];
-    const parts = inside.split(/\s+OR\s+/i).map(s => s.trim());
+    const parts = inside.split(/\s+OR\s+/i).map(s => s.trim()).filter(Boolean);
     if (parts.length > 1) {
       orGroups.push(parts);
     }
@@ -87,6 +87,10 @@ function parseQuery(raw) {
   // Remaining terms
   q.split(/\s+/).forEach(t => {
     if (!t) return;
+
+    // Ignore bare OR tokens (outside parentheses)
+    if (t.toUpperCase() === 'OR') return;
+
     if (t.startsWith('-"') && t.endsWith('"')) {
       excluded.push(t.slice(2, -1));
     } else if (t.startsWith('-')) {
