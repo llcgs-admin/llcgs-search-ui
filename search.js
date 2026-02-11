@@ -3,19 +3,32 @@ import { API_BASE } from './config.js';
 let INDEX = null;
 
 /************************************************************
- * LOAD INDEX (static JSON from GitHub Pages)
+ * NEIGHBORHOOD MAP
+ ************************************************************/
+const NEIGHBORHOOD_MAP = {
+  "Box01": "Near South",
+  "Box02": "Yankee Hill",
+  "Box03": "South Salt Creek",
+  "Box04": "North Bottoms",
+  "Box05": "University Place",
+  "Box06": "University Place",
+  "Box07": "College View",
+  "Box08": "College View",
+  "Box09": "East Campus",
+  "Box10": "East Campus"
+};
+
+/************************************************************
+ * LOAD INDEX
  ************************************************************/
 async function loadIndex() {
   try {
     const response = await fetch('data/index.json');
-    if (!response.ok) {
-      throw new Error(`Failed to load index.json: ${response.status}`);
-    }
+    if (!response.ok) throw new Error(`Failed to load index.json: ${response.status}`);
 
     const data = await response.json();
     console.log(`Index loaded (${Object.keys(data).length} records).`);
 
-    // Convert object → array
     return Object.values(data);
 
   } catch (err) {
@@ -26,25 +39,79 @@ async function loadIndex() {
 }
 
 /************************************************************
- * SIMPLE SEARCH
+ * QUERY PARSER
  ************************************************************/
-function searchIndex(query) {
+function parseQuery(raw) {
+  const phrases = [];
+  const terms = [];
+  const excluded = [];
+
+  // Extract quoted phrases
+  const phraseRegex = /"([^"]+)"/g;
+  let match;
+  while ((match = phraseRegex.exec(raw)) !== null) {
+    phrases.push(match[1].trim());
+  }
+
+  // Remove phrases from raw query
+  const cleaned = raw.replace(phraseRegex, '').trim();
+
+  // Split remaining terms
+  cleaned.split(/\s+/).forEach(t => {
+    if (!t) return;
+    if (t.startsWith('-"') && t.endsWith('"')) {
+      excluded.push(t.slice(2, -1));
+    } else if (t.startsWith('-')) {
+      excluded.push(t.slice(1));
+    } else {
+      terms.push(t);
+    }
+  });
+
+  return { phrases, terms, excluded };
+}
+
+/************************************************************
+ * SEARCH LOGIC
+ ************************************************************/
+function recordMatches(rec, parsed) {
+  const hay = (rec.title + ' ' + rec.text).toLowerCase();
+
+  // Must include all phrases
+  for (const p of parsed.phrases) {
+    if (!hay.includes(p.toLowerCase())) return false;
+  }
+
+  // Must include all terms
+  for (const t of parsed.terms) {
+    if (!hay.includes(t.toLowerCase())) return false;
+  }
+
+  // Must NOT include excluded terms
+  for (const ex of parsed.excluded) {
+    if (hay.includes(ex.toLowerCase())) return false;
+  }
+
+  return true;
+}
+
+function searchIndex(rawQuery, neighborhoodFilter) {
   if (!INDEX) return [];
 
-  const q = query.trim().toLowerCase();
+  const parsed = parseQuery(rawQuery);
+  const q = rawQuery.trim();
   if (!q) return [];
 
   return INDEX.filter(rec => {
-    const hay = (rec.title + ' ' + rec.text).toLowerCase();
-    return hay.includes(q);
+    const neighborhood = NEIGHBORHOOD_MAP[rec.box] || "Unknown";
+    if (neighborhoodFilter && neighborhood !== neighborhoodFilter) return false;
+    return recordMatches(rec, parsed);
   });
 }
 
 /************************************************************
  * SNIPPET HELPERS
  ************************************************************/
-
-// Find all match positions for the search terms
 function findMatches(text, terms) {
   const matches = [];
   const lower = text.toLowerCase();
@@ -61,46 +128,40 @@ function findMatches(text, terms) {
   return matches.sort((a, b) => a.index - b.index);
 }
 
-// Build centered snippets around each match
-function buildSnippets(text, matches, radius = 80) {
-  const snippets = [];
+function buildSnippet(text, match, radius = 80) {
+  const start = Math.max(0, match.index - radius);
+  const end = Math.min(text.length, match.index + match.length + radius);
 
-  for (const m of matches) {
-    const start = Math.max(0, m.index - radius);
-    const end = Math.min(text.length, m.index + m.length + radius);
+  let snippet = text.slice(start, end).trim();
+  if (start > 0) snippet = "…" + snippet;
+  if (end < text.length) snippet = snippet + "…";
 
-    let snippet = text.slice(start, end).trim();
-
-    if (start > 0) snippet = "…" + snippet;
-    if (end < text.length) snippet = snippet + "…";
-
-    snippets.push(snippet);
-  }
-
-  return snippets;
+  return snippet;
 }
 
-// Highlight matched terms
 function highlightTerms(text, terms) {
   const escaped = terms.map(t => t.replace(/[.*+?^${}()|[\]\\]/g, "\\$&"));
   const regex = new RegExp(`\\b(${escaped.join("|")})\\b`, "gi");
-  return text.replace(regex, match => `<mark>${match}</mark>`);
+  return text.replace(regex, m => `<mark>${m}</mark>`);
 }
 
 /************************************************************
  * RENDER RESULTS
  ************************************************************/
-function renderResults(results) {
+function renderResults(results, elapsedMs) {
   const container = document.getElementById('results');
   container.innerHTML = '';
 
-  if (!results.length) {
-    container.textContent = 'No results.';
-    return;
-  }
+  const header = document.createElement('div');
+  header.className = 'result-header';
+  header.textContent = `Found ${results.length} results in ${elapsedMs} ms`;
+  container.appendChild(header);
 
-  const query = document.getElementById('query').value.trim();
-  const terms = query.split(/\s+/).filter(t => t.length > 0);
+  if (!results.length) return;
+
+  const rawQuery = document.getElementById('query').value.trim();
+  const parsed = parseQuery(rawQuery);
+  const allTerms = [...parsed.terms, ...parsed.phrases];
 
   for (const rec of results) {
     const resultDiv = document.createElement('div');
@@ -112,48 +173,91 @@ function renderResults(results) {
     title.textContent = rec.title;
     resultDiv.appendChild(title);
 
-    /******** SMART SNIPPETS ********/
-    const matches = findMatches(rec.text, terms);
-    let snippets = buildSnippets(rec.text, matches);
+    /******** PAGE-GROUPED SNIPPETS ********/
+    const pageGroups = [];
 
-    // Highlight terms
-    snippets = snippets.map(sn => highlightTerms(sn, terms));
+    rec.pages.forEach((pageText, idx) => {
+      const matches = findMatches(pageText, allTerms);
+      if (matches.length === 0) return;
+
+      const snippets = matches.map(m => {
+        let sn = buildSnippet(pageText, m);
+        sn = highlightTerms(sn, allTerms);
+        return sn;
+      });
+
+      pageGroups.push({
+        page: idx + 1,
+        snippets
+      });
+    });
 
     const snippetContainer = document.createElement('div');
     snippetContainer.className = 'snippet-container';
 
-    const initial = snippets.slice(0, 3);
-    initial.forEach(sn => {
-      const snDiv = document.createElement('div');
-      snDiv.className = 'snippet';
-      snDiv.innerHTML = sn;
-      snippetContainer.appendChild(snDiv);
+    let totalSnippets = pageGroups.reduce((sum, pg) => sum + pg.snippets.length, 0);
+    let showingAll = false;
+
+    pageGroups.forEach((pg, i) => {
+      const pageHeader = document.createElement('div');
+      pageHeader.className = 'page-header';
+      pageHeader.textContent = `Page ${pg.page} (${pg.snippets.length} matches)`;
+
+      const arrow = document.createElement('span');
+      arrow.className = 'arrow';
+      arrow.textContent = '▼';
+      pageHeader.prepend(arrow);
+
+      const pageBlock = document.createElement('div');
+      pageBlock.className = 'page-block';
+
+      // Auto-expand pages with matches (Option B)
+      if (i === 0) {
+        pageBlock.style.display = 'block';
+      } else {
+        pageBlock.style.display = 'none';
+        arrow.textContent = '▶';
+      }
+
+      pageHeader.addEventListener('click', () => {
+        const open = pageBlock.style.display === 'block';
+        pageBlock.style.display = open ? 'none' : 'block';
+        arrow.textContent = open ? '▶' : '▼';
+      });
+
+      pg.snippets.forEach(sn => {
+        const snDiv = document.createElement('div');
+        snDiv.className = 'snippet';
+        snDiv.innerHTML = sn;
+        pageBlock.appendChild(snDiv);
+      });
+
+      snippetContainer.appendChild(pageHeader);
+      snippetContainer.appendChild(pageBlock);
     });
 
     resultDiv.appendChild(snippetContainer);
 
-    // Toggle button
-    if (snippets.length > 3) {
+    /******** SHOW ALL / FEWER ********/
+    if (totalSnippets > 3) {
       const toggleBtn = document.createElement('button');
       toggleBtn.className = 'snippet-toggle';
       toggleBtn.textContent = 'Show all snippets';
 
-      let expanded = false;
-
       toggleBtn.addEventListener('click', () => {
-        expanded = !expanded;
-        snippetContainer.innerHTML = '';
+        showingAll = !showingAll;
 
-        const toShow = expanded ? snippets : snippets.slice(0, 3);
-
-        toShow.forEach(sn => {
-          const snDiv = document.createElement('div');
-          snDiv.className = 'snippet';
-          snDiv.innerHTML = sn;
-          snippetContainer.appendChild(snDiv);
+        const blocks = snippetContainer.querySelectorAll('.page-block');
+        blocks.forEach(block => {
+          block.style.display = showingAll ? 'block' : 'none';
         });
 
-        toggleBtn.textContent = expanded ? 'Show fewer snippets' : 'Show all snippets';
+        const arrows = snippetContainer.querySelectorAll('.arrow');
+        arrows.forEach(a => {
+          a.textContent = showingAll ? '▼' : '▶';
+        });
+
+        toggleBtn.textContent = showingAll ? 'Show fewer snippets' : 'Show all snippets';
       });
 
       resultDiv.appendChild(toggleBtn);
@@ -175,7 +279,6 @@ function renderResults(results) {
       const left = (screen.width - width) / 2;
       const top = (screen.height - height) / 2;
 
-      // Check toggle for multi-popup mode
       const multi = document.getElementById('multiPopupToggle').checked;
       const windowName = multi ? '_blank' : 'pdfPopup';
 
@@ -197,8 +300,13 @@ function renderResults(results) {
  ************************************************************/
 document.getElementById('searchBtn').addEventListener('click', () => {
   const q = document.getElementById('query').value;
-  const results = searchIndex(q);
-  renderResults(results);
+  const neighborhood = document.getElementById('neighborhoodFilter')?.value || null;
+
+  const start = performance.now();
+  const results = searchIndex(q, neighborhood);
+  const elapsed = Math.round(performance.now() - start);
+
+  renderResults(results, elapsed);
 });
 
 document.getElementById('query').addEventListener('keydown', e => {
