@@ -25,9 +25,7 @@ function populateNeighborhoodDropdown() {
   const select = document.getElementById('neighborhoodFilter');
   if (!select) return;
 
-  // Extract unique neighborhoods
   const neighborhoods = [...new Set(Object.values(NEIGHBORHOOD_MAP))];
-
   neighborhoods.sort().forEach(n => {
     const opt = document.createElement('option');
     opt.value = n;
@@ -57,25 +55,37 @@ async function loadIndex() {
 }
 
 /************************************************************
- * QUERY PARSER
+ * QUERY PARSER WITH OR GROUPS
  ************************************************************/
 function parseQuery(raw) {
   const phrases = [];
   const terms = [];
   const excluded = [];
+  const orGroups = [];
+
+  let q = raw;
+
+  // Extract OR groups inside parentheses
+  const orRegex = /\(([^)]+)\)/g;
+  let match;
+  while ((match = orRegex.exec(raw)) !== null) {
+    const inside = match[1];
+    const parts = inside.split(/\s+OR\s+/i).map(s => s.trim());
+    if (parts.length > 1) {
+      orGroups.push(parts);
+    }
+    q = q.replace(match[0], ''); // remove OR group from main query
+  }
 
   // Extract quoted phrases
   const phraseRegex = /"([^"]+)"/g;
-  let match;
-  while ((match = phraseRegex.exec(raw)) !== null) {
+  while ((match = phraseRegex.exec(q)) !== null) {
     phrases.push(match[1].trim());
   }
+  q = q.replace(phraseRegex, '');
 
-  // Remove phrases from raw query
-  const cleaned = raw.replace(phraseRegex, '').trim();
-
-  // Split remaining terms
-  cleaned.split(/\s+/).forEach(t => {
+  // Remaining terms
+  q.split(/\s+/).forEach(t => {
     if (!t) return;
     if (t.startsWith('-"') && t.endsWith('"')) {
       excluded.push(t.slice(2, -1));
@@ -86,7 +96,7 @@ function parseQuery(raw) {
     }
   });
 
-  return { phrases, terms, excluded };
+  return { phrases, terms, excluded, orGroups };
 }
 
 /************************************************************
@@ -100,9 +110,21 @@ function recordMatches(rec, parsed) {
     if (!hay.includes(p.toLowerCase())) return false;
   }
 
-  // Must include all terms
+  // Must include all standalone terms
   for (const t of parsed.terms) {
     if (!hay.includes(t.toLowerCase())) return false;
+  }
+
+  // Must satisfy each OR group
+  for (const group of parsed.orGroups) {
+    let ok = false;
+    for (const g of group) {
+      if (hay.includes(g.toLowerCase())) {
+        ok = true;
+        break;
+      }
+    }
+    if (!ok) return false;
   }
 
   // Must NOT include excluded terms
@@ -179,7 +201,7 @@ function renderResults(results, elapsedMs) {
 
   const rawQuery = document.getElementById('query').value.trim();
   const parsed = parseQuery(rawQuery);
-  const allTerms = [...parsed.terms, ...parsed.phrases];
+  const allTerms = [...parsed.terms, ...parsed.phrases, ...parsed.orGroups.flat()];
 
   for (const rec of results) {
     const resultDiv = document.createElement('div');
@@ -211,132 +233,4 @@ function renderResults(results, elapsedMs) {
     });
 
     const snippetContainer = document.createElement('div');
-    snippetContainer.className = 'snippet-container';
-
-    let totalSnippets = pageGroups.reduce((sum, pg) => sum + pg.snippets.length, 0);
-    let showingAll = false;
-
-    pageGroups.forEach((pg, i) => {
-      const pageHeader = document.createElement('div');
-      pageHeader.className = 'page-header';
-      pageHeader.textContent = `Page ${pg.page} (${pg.snippets.length} matches)`;
-
-      const arrow = document.createElement('span');
-      arrow.className = 'arrow';
-      arrow.textContent = '▼';
-      pageHeader.prepend(arrow);
-
-      const pageBlock = document.createElement('div');
-      pageBlock.className = 'page-block';
-
-      // Auto-expand pages with matches (Option B)
-      if (i === 0) {
-        pageBlock.style.display = 'block';
-      } else {
-        pageBlock.style.display = 'none';
-        arrow.textContent = '▶';
-      }
-
-      pageHeader.addEventListener('click', () => {
-        const open = pageBlock.style.display === 'block';
-        pageBlock.style.display = open ? 'none' : 'block';
-        arrow.textContent = open ? '▶' : '▼';
-      });
-
-      pg.snippets.forEach(sn => {
-        const snDiv = document.createElement('div');
-        snDiv.className = 'snippet';
-        snDiv.innerHTML = sn;
-        pageBlock.appendChild(snDiv);
-      });
-
-      snippetContainer.appendChild(pageHeader);
-      snippetContainer.appendChild(pageBlock);
-    });
-
-    resultDiv.appendChild(snippetContainer);
-
-    /******** SHOW ALL / FEWER ********/
-    if (totalSnippets > 3) {
-      const toggleBtn = document.createElement('button');
-      toggleBtn.className = 'snippet-toggle';
-      toggleBtn.textContent = 'Show all snippets';
-
-      toggleBtn.addEventListener('click', () => {
-        showingAll = !showingAll;
-
-        const blocks = snippetContainer.querySelectorAll('.page-block');
-        blocks.forEach(block => {
-          block.style.display = showingAll ? 'block' : 'none';
-        });
-
-        const arrows = snippetContainer.querySelectorAll('.arrow');
-        arrows.forEach(a => {
-          a.textContent = showingAll ? '▼' : '▶';
-        });
-
-        toggleBtn.textContent = showingAll ? 'Show fewer snippets' : 'Show all snippets';
-      });
-
-      resultDiv.appendChild(toggleBtn);
-    }
-
-    /******** OPEN PDF LINK ********/
-    const link = document.createElement('a');
-    link.href = `pdfviewer.html?id=${encodeURIComponent(rec.file_id)}`;
-    link.textContent = 'Open PDF';
-
-    link.addEventListener('click', e => {
-      e.preventDefault();
-
-      const fileId = rec.file_id;
-      const viewerUrl = `pdfviewer.html?id=${encodeURIComponent(fileId)}`;
-
-      const width = 900;
-      const height = 700;
-      const left = (screen.width - width) / 2;
-      const top = (screen.height - height) / 2;
-
-      const multi = document.getElementById('multiPopupToggle').checked;
-      const windowName = multi ? '_blank' : 'pdfPopup';
-
-      window.open(
-        viewerUrl,
-        windowName,
-        `width=${width},height=${height},left=${left},top=${top},resizable=yes,scrollbars=yes`
-      );
-    });
-
-    resultDiv.appendChild(link);
-
-    container.appendChild(resultDiv);
-  }
-}
-
-/************************************************************
- * EVENT HANDLERS
- ************************************************************/
-document.getElementById('searchBtn').addEventListener('click', () => {
-  const q = document.getElementById('query').value;
-  const neighborhood = document.getElementById('neighborhoodFilter')?.value || null;
-
-  const start = performance.now();
-  const results = searchIndex(q, neighborhood);
-  const elapsed = Math.round(performance.now() - start);
-
-  renderResults(results, elapsed);
-});
-
-document.getElementById('query').addEventListener('keydown', e => {
-  if (e.key === 'Enter') {
-    document.getElementById('searchBtn').click();
-  }
-});
-
-/************************************************************
- * INITIALIZE
- ************************************************************/
-loadIndex().then(data => {
-  INDEX = data;
-  populateNeighborhoodDropdown();
-});
+    snippetContainer
