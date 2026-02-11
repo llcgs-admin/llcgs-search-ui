@@ -68,35 +68,41 @@
   </div>
 
   <button id="openBtn">Open PDF</button>
-<script>
-  // Back button
-  document.getElementById('backBtn').addEventListener('click', () => {
-    window.location.href = 'index.html';
-  });
-
-  // Extract file ID
-  const params = new URLSearchParams(window.location.search);
-  const fileId = params.get('id');
-
-  // Display title
-  document.getElementById('pdfTitle').textContent = `Document: ${fileId}`;
-
-  // Open PDF in a popup window
-  document.getElementById('openBtn').addEventListener('click', () => {
-    const driveUrl = `https://drive.google.com/file/d/${fileId}/preview`;
-
-    const width = 900;
-    const height = 700;
-    const left = (screen.width - width) / 2;
-    const top = (screen.height - height) / 2;
-
-    window.open(
-      driveUrl,
-      'pdfPopup',
-      `width=${width},height=${height},left=${left},top=${top},resizable=yes,scrollbars=yes`
-    );
-  });
-</script>
+  <script>
+    // Extract file ID
+    const params = new URLSearchParams(window.location.search);
+    const fileId = params.get('id');
+  
+    // Display title
+    document.getElementById('pdfTitle').textContent = `Document: ${fileId}`;
+  
+    // Back button closes the popup
+    document.getElementById('backBtn').addEventListener('click', () => {
+      window.close();
+    });
+  
+    // Open PDF in its own popup
+    if (fileId) {
+      const driveUrl = `https://drive.google.com/file/d/${fileId}/preview`;
+  
+      const width = 900;
+      const height = 700;
+      const left = (screen.width - width) / 2;
+      const top = (screen.height - height) / 2;
+  
+      // Give the header time to render
+      setTimeout(() => {
+        window.open(
+          driveUrl,
+          'pdfPopup',
+          `width=${width},height=${height},left=${left},top=${top},resizable=yes,scrollbars=yes`
+        );
+  
+        // Close the viewer popup
+        window.close();
+      }, 300);
+    }
+  </script>
 
 </body>
 </html>
