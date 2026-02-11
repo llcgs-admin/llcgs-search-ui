@@ -62,47 +62,72 @@ function renderResults(results) {
     resultDiv.appendChild(title);
 
 // Snippet container
+// Snippet container
 const snippetContainer = document.createElement('div');
 snippetContainer.className = 'snippet-container';
 
-// Show first 3 snippets
-const snippets = rec.snippets || [];
-const initialSnippets = snippets.slice(0, 3);
+// Build a snippets array from either rec.snippets or rec.text
+let snippets = [];
 
-initialSnippets.forEach(sn => {
-  const snDiv = document.createElement('div');
-  snDiv.className = 'snippet';
-  snDiv.textContent = sn;
-  snippetContainer.appendChild(snDiv);
-});
-
-// Toggle button
-if (snippets.length > 3) {
-  const toggleBtn = document.createElement('button');
-  toggleBtn.className = 'snippet-toggle';
-  toggleBtn.textContent = 'Show all snippets';
-
-  let expanded = false;
-
-  toggleBtn.addEventListener('click', () => {
-    expanded = !expanded;
-    snippetContainer.innerHTML = '';
-
-    const toShow = expanded ? snippets : snippets.slice(0, 3);
-
-    toShow.forEach(sn => {
-      const snDiv = document.createElement('div');
-      snDiv.className = 'snippet';
-      snDiv.textContent = sn;
-      snippetContainer.appendChild(snDiv);
-    });
-
-    toggleBtn.textContent = expanded ? 'Show fewer snippets' : 'Show all snippets';
-  });
-
-  resultDiv.appendChild(toggleBtn);
+if (Array.isArray(rec.snippets) && rec.snippets.length > 0) {
+  // Future-friendly: if you later add real snippet arrays to the index
+  snippets = rec.snippets;
+} else if (rec.text) {
+  // Fallback: derive pseudo-snippets from the full text
+  const chunkSize = 200;
+  for (let i = 0; i < rec.text.length; i += chunkSize) {
+    snippets.push(rec.text.slice(i, i + chunkSize));
+    if (snippets.length >= 10) break; // safety cap
+  }
 }
 
+// If somehow still no snippets, bail out gracefully
+if (!snippets.length) {
+  const snDiv = document.createElement('div');
+  snDiv.className = 'snippet';
+  snDiv.textContent = '(No snippet available)';
+  snippetContainer.appendChild(snDiv);
+  resultDiv.appendChild(snippetContainer);
+} else {
+  // Show first 3 snippets
+  const initialSnippets = snippets.slice(0, 3);
+
+  initialSnippets.forEach(sn => {
+    const snDiv = document.createElement('div');
+    snDiv.className = 'snippet';
+    snDiv.textContent = sn + '…';
+    snippetContainer.appendChild(snDiv);
+  });
+
+  resultDiv.appendChild(snippetContainer);
+
+  // Toggle button if more than 3
+  if (snippets.length > 3) {
+    const toggleBtn = document.createElement('button');
+    toggleBtn.className = 'snippet-toggle';
+    toggleBtn.textContent = 'Show all snippets';
+
+    let expanded = false;
+
+    toggleBtn.addEventListener('click', () => {
+      expanded = !expanded;
+      snippetContainer.innerHTML = '';
+
+      const toShow = expanded ? snippets : snippets.slice(0, 3);
+
+      toShow.forEach(sn => {
+        const snDiv = document.createElement('div');
+        snDiv.className = 'snippet';
+        snDiv.textContent = sn + '…';
+        snippetContainer.appendChild(snDiv);
+      });
+
+      toggleBtn.textContent = expanded ? 'Show fewer snippets' : 'Show all snippets';
+    });
+
+    resultDiv.appendChild(toggleBtn);
+  }
+}
 resultDiv.appendChild(snippetContainer);
 
     const link = document.createElement('a');
