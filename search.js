@@ -19,6 +19,24 @@ const NEIGHBORHOOD_MAP = {
 };
 
 /************************************************************
+ * POPULATE NEIGHBORHOOD DROPDOWN
+ ************************************************************/
+function populateNeighborhoodDropdown() {
+  const select = document.getElementById('neighborhoodFilter');
+  if (!select) return;
+
+  // Extract unique neighborhoods
+  const neighborhoods = [...new Set(Object.values(NEIGHBORHOOD_MAP))];
+
+  neighborhoods.sort().forEach(n => {
+    const opt = document.createElement('option');
+    opt.value = n;
+    opt.textContent = n;
+    select.appendChild(opt);
+  });
+}
+
+/************************************************************
  * LOAD INDEX
  ************************************************************/
 async function loadIndex() {
