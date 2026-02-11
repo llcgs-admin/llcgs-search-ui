@@ -69,25 +69,29 @@ function renderResults(results) {
     const link = document.createElement('a');
     link.href = `pdfviewer.html?id=${encodeURIComponent(rec.file_id)}`;
     link.textContent = 'Open PDF';
- //   console.log("CLICK HANDLER SYNC TEST", performance.now());
-    
- link.addEventListener('click', e => {
-  e.preventDefault();
 
-  const fileId = rec.file_id;
-  const viewerUrl = `pdfviewer.html?id=${encodeURIComponent(fileId)}`;
+    link.addEventListener('click', e => {
+      e.preventDefault();
 
-  const width = 900;
-  const height = 700;
-  const left = (screen.width - width) / 2;
-  const top = (screen.height - height) / 2;
+      const fileId = rec.file_id;
+      const viewerUrl = `pdfviewer.html?id=${encodeURIComponent(fileId)}`;
 
-  window.open(
-    viewerUrl,
-    'pdfPopup',
-    `width=${width},height=${height},left=${left},top=${top},resizable=yes,scrollbars=yes`
-  );
-});
+      const width = 900;
+      const height = 700;
+      const left = (screen.width - width) / 2;
+      const top = (screen.height - height) / 2;
+
+      window.open(
+        viewerUrl,
+        'pdfPopup',
+        `width=${width},height=${height},left=${left},top=${top},resizable=yes,scrollbars=yes`
+      );
+    });
+
+    resultDiv.appendChild(link);
+    container.appendChild(resultDiv);
+  } // <-- closes the for-loop
+} // <-- closes renderResults()
 /************************************************************
  * EVENT HANDLERS
  ************************************************************/
