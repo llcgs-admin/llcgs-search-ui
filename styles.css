@@ -125,6 +125,24 @@ h1, h2, h3 {
   background: #dcdcdc;
 }
 
+.snippet-container {
+  margin-top: 6px;
+}
+
+.snippet {
+  margin-bottom: 4px;
+  color: #444;
+}
+
+.snippet-toggle {
+  margin-top: 6px;
+  background: #eee;
+  border: 1px solid #ccc;
+  padding: 4px 8px;
+  border-radius: 4px;
+  cursor: pointer;
+}
+
 #pdfTitle {
   font-size: 15px;
   font-weight: 600;
