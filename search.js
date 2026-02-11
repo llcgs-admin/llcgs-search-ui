@@ -69,7 +69,20 @@ function renderResults(results) {
     const link = document.createElement('a');
     link.href = `pdfviewer.html?id=${encodeURIComponent(rec.file_id)}`;
     link.textContent = 'Open PDF';
-    link.target = "_blank";   // <-- this forces a new tab
+    link.addEventListener('click', e => {
+      e.preventDefault();
+    
+      const width = 500;
+      const height = 200;
+      const left = (screen.width - width) / 2;
+      const top = (screen.height - height) / 2;
+    
+      window.open(
+        `pdfviewer.html?id=${encodeURIComponent(rec.file_id)}`,
+        'viewerPopup',
+        `width=${width},height=${height},left=${left},top=${top},resizable=no`
+      );
+});
 
     resultDiv.appendChild(link);
 
