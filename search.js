@@ -107,7 +107,7 @@ function renderResults(results) {
     if (viewerWin && !viewerWin.closed) {
       viewerWin.close();
     }
-  }, 5000);
+  }, 500000);
 });
     resultDiv.appendChild(link);
 
