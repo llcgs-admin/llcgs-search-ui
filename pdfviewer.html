@@ -69,13 +69,13 @@
 
   <button id="openBtn">Open PDF</button>
  <script>
-  const params = new URLSearchParams(window.location.search);
-  const fileId = params.get('id');
-  document.getElementById('pdfTitle').textContent = `Document: ${fileId}`;
-
-  document.getElementById('backBtn').addEventListener('click', () => {
-    window.close();
-  });
+    const params = new URLSearchParams(window.location.search);
+    const fileId = params.get('id');
+    document.getElementById('pdfTitle').textContent = `Document: ${fileId}`;
+    
+    document.getElementById('backBtn').addEventListener('click', () => {
+      window.close();
+    });
 </script>
 
 </body>
