@@ -41,6 +41,53 @@ function searchIndex(query) {
 }
 
 /************************************************************
+ * SNIPPET HELPERS
+ ************************************************************/
+
+// Find all match positions for the search terms
+function findMatches(text, terms) {
+  const matches = [];
+  const lower = text.toLowerCase();
+
+  terms.forEach(term => {
+    const t = term.toLowerCase();
+    let idx = lower.indexOf(t);
+    while (idx !== -1) {
+      matches.push({ index: idx, length: t.length });
+      idx = lower.indexOf(t, idx + t.length);
+    }
+  });
+
+  return matches.sort((a, b) => a.index - b.index);
+}
+
+// Build centered snippets around each match
+function buildSnippets(text, matches, radius = 80) {
+  const snippets = [];
+
+  for (const m of matches) {
+    const start = Math.max(0, m.index - radius);
+    const end = Math.min(text.length, m.index + m.length + radius);
+
+    let snippet = text.slice(start, end).trim();
+
+    if (start > 0) snippet = "…" + snippet;
+    if (end < text.length) snippet = snippet + "…";
+
+    snippets.push(snippet);
+  }
+
+  return snippets;
+}
+
+// Highlight matched terms
+function highlightTerms(text, terms) {
+  const escaped = terms.map(t => t.replace(/[.*+?^${}()|[\]\\]/g, "\\$&"));
+  const regex = new RegExp(`\\b(${escaped.join("|")})\\b`, "gi");
+  return text.replace(regex, match => `<mark>${match}</mark>`);
+}
+
+/************************************************************
  * RENDER RESULTS
  ************************************************************/
 function renderResults(results) {
@@ -52,84 +99,67 @@ function renderResults(results) {
     return;
   }
 
+  const query = document.getElementById('query').value.trim();
+  const terms = query.split(/\s+/).filter(t => t.length > 0);
+
   for (const rec of results) {
     const resultDiv = document.createElement('div');
     resultDiv.className = 'result';
 
+    /******** TITLE ********/
     const title = document.createElement('div');
     title.className = 'result-title';
     title.textContent = rec.title;
     resultDiv.appendChild(title);
 
-// Snippet container
-// Snippet container
-const snippetContainer = document.createElement('div');
-snippetContainer.className = 'snippet-container';
+    /******** SMART SNIPPETS ********/
+    const matches = findMatches(rec.text, terms);
+    let snippets = buildSnippets(rec.text, matches);
 
-// Build a snippets array from either rec.snippets or rec.text
-let snippets = [];
+    // Highlight terms
+    snippets = snippets.map(sn => highlightTerms(sn, terms));
 
-if (Array.isArray(rec.snippets) && rec.snippets.length > 0) {
-  // Future-friendly: if you later add real snippet arrays to the index
-  snippets = rec.snippets;
-} else if (rec.text) {
-  // Fallback: derive pseudo-snippets from the full text
-  const chunkSize = 200;
-  for (let i = 0; i < rec.text.length; i += chunkSize) {
-    snippets.push(rec.text.slice(i, i + chunkSize));
-    if (snippets.length >= 10) break; // safety cap
-  }
-}
+    const snippetContainer = document.createElement('div');
+    snippetContainer.className = 'snippet-container';
 
-// If somehow still no snippets, bail out gracefully
-if (!snippets.length) {
-  const snDiv = document.createElement('div');
-  snDiv.className = 'snippet';
-  snDiv.textContent = '(No snippet available)';
-  snippetContainer.appendChild(snDiv);
-  resultDiv.appendChild(snippetContainer);
-} else {
-  // Show first 3 snippets
-  const initialSnippets = snippets.slice(0, 3);
-
-  initialSnippets.forEach(sn => {
-    const snDiv = document.createElement('div');
-    snDiv.className = 'snippet';
-    snDiv.textContent = sn + '…';
-    snippetContainer.appendChild(snDiv);
-  });
-
-  resultDiv.appendChild(snippetContainer);
-
-  // Toggle button if more than 3
-  if (snippets.length > 3) {
-    const toggleBtn = document.createElement('button');
-    toggleBtn.className = 'snippet-toggle';
-    toggleBtn.textContent = 'Show all snippets';
-
-    let expanded = false;
-
-    toggleBtn.addEventListener('click', () => {
-      expanded = !expanded;
-      snippetContainer.innerHTML = '';
-
-      const toShow = expanded ? snippets : snippets.slice(0, 3);
-
-      toShow.forEach(sn => {
-        const snDiv = document.createElement('div');
-        snDiv.className = 'snippet';
-        snDiv.textContent = sn + '…';
-        snippetContainer.appendChild(snDiv);
-      });
-
-      toggleBtn.textContent = expanded ? 'Show fewer snippets' : 'Show all snippets';
+    const initial = snippets.slice(0, 3);
+    initial.forEach(sn => {
+      const snDiv = document.createElement('div');
+      snDiv.className = 'snippet';
+      snDiv.innerHTML = sn;
+      snippetContainer.appendChild(snDiv);
     });
 
-    resultDiv.appendChild(toggleBtn);
-  }
-}
-resultDiv.appendChild(snippetContainer);
+    resultDiv.appendChild(snippetContainer);
 
+    // Toggle button
+    if (snippets.length > 3) {
+      const toggleBtn = document.createElement('button');
+      toggleBtn.className = 'snippet-toggle';
+      toggleBtn.textContent = 'Show all snippets';
+
+      let expanded = false;
+
+      toggleBtn.addEventListener('click', () => {
+        expanded = !expanded;
+        snippetContainer.innerHTML = '';
+
+        const toShow = expanded ? snippets : snippets.slice(0, 3);
+
+        toShow.forEach(sn => {
+          const snDiv = document.createElement('div');
+          snDiv.className = 'snippet';
+          snDiv.innerHTML = sn;
+          snippetContainer.appendChild(snDiv);
+        });
+
+        toggleBtn.textContent = expanded ? 'Show fewer snippets' : 'Show all snippets';
+      });
+
+      resultDiv.appendChild(toggleBtn);
+    }
+
+    /******** OPEN PDF LINK ********/
     const link = document.createElement('a');
     link.href = `pdfviewer.html?id=${encodeURIComponent(rec.file_id)}`;
     link.textContent = 'Open PDF';
@@ -145,10 +175,10 @@ resultDiv.appendChild(snippetContainer);
       const left = (screen.width - width) / 2;
       const top = (screen.height - height) / 2;
 
+      // Check toggle for multi-popup mode
       const multi = document.getElementById('multiPopupToggle').checked;
-      
       const windowName = multi ? '_blank' : 'pdfPopup';
-      
+
       window.open(
         viewerUrl,
         windowName,
@@ -157,9 +187,11 @@ resultDiv.appendChild(snippetContainer);
     });
 
     resultDiv.appendChild(link);
+
     container.appendChild(resultDiv);
-  } // <-- closes the for-loop
-} // <-- closes renderResults()
+  }
+}
+
 /************************************************************
  * EVENT HANDLERS
  ************************************************************/
