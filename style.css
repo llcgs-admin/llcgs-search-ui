@@ -44,6 +44,18 @@ body {
   opacity: 0.9;
 }
 
+.help-link {
+  margin-top: 8px;
+  font-size: 0.95rem;
+  cursor: pointer;
+  color: var(--llcgs-gold);
+  text-decoration: underline;
+}
+
+.help-link:hover {
+  color: white;
+}
+
 /************************************************************
  * MAIN CONTAINER
  ************************************************************/
@@ -194,6 +206,56 @@ mark {
 }
 
 /************************************************************
+ * MODAL
+ ************************************************************/
+.modal {
+  display: none;
+  position: fixed;
+  z-index: 2000;
+  left: 0;
+  top: 0;
+  width: 100%;
+  height: 100%;
+  overflow: auto;
+  background: rgba(0,0,0,0.4);
+}
+
+.modal-content {
+  background: white;
+  margin: 8% auto;
+  padding: 20px 30px;
+  border: 1px solid var(--llcgs-border);
+  border-radius: 6px;
+  max-width: 600px;
+  box-shadow: 0 2px 8px rgba(0,0,0,0.2);
+  font-size: 1rem;
+}
+
+.modal-content h2 {
+  font-family: "Georgia", serif;
+  color: var(--llcgs-green);
+  margin-top: 0;
+}
+
+.modal-close {
+  float: right;
+  font-size: 1.6rem;
+  cursor: pointer;
+  color: var(--llcgs-charcoal);
+}
+
+.modal-close:hover {
+  color: var(--llcgs-green);
+}
+
+.modal-content code {
+  background: var(--llcgs-cream);
+  padding: 2px 4px;
+  border-radius: 3px;
+  font-size: 0.95rem;
+}
+
+/************************************************************
  * RESPONSIVE
  ************************************************************/
 @media (max-width: 600px) {
@@ -207,5 +269,11 @@ mark {
 
   .result-title {
     font-size: 1.1rem;
+  }
+
+  .modal-content {
+    width: 90%;
+    margin-top: 20%;
+    padding: 15px 20px;
   }
 }
