@@ -1,58 +1,86 @@
-<!doctype html>
-<html lang="en">
+<!DOCTYPE html>
+<html>
 <head>
-  <meta charset="utf-8">
+  <meta charset="UTF-8">
   <title>PDF Viewer</title>
-  <meta name="viewport" content="width=device-width, initial-scale=1">
   <style>
-    html, body {
+    body {
       margin: 0;
-      padding: 0;
-      height: 100%;
-      background: #333;
+      font-family: sans-serif;
     }
-    #viewer {
-      width: 100%;
-      height: 100%;
-      border: none;
+
+    #viewer-header {
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      padding: 10px 14px;
+      background: #f7f7f7;
+      border-bottom: 1px solid #ddd;
+    }
+
+    #backBtn {
+      background: #e9e9e9;
+      border: 1px solid #ccc;
+      padding: 6px 12px;
+      border-radius: 4px;
+      cursor: pointer;
+      font-size: 14px;
+    }
+
+    #backBtn:hover {
+      background: #dcdcdc;
+    }
+
+    #pdfTitle {
+      font-size: 15px;
+      font-weight: 600;
+      color: #333;
+      margin-left: 10px;
+      flex-grow: 1;
+      text-align: right;
+      white-space: nowrap;
+      overflow: hidden;
+      text-overflow: ellipsis;
+    }
+
+    #redirecting {
+      padding: 20px;
+      font-size: 16px;
+      color: #555;
     }
   </style>
 </head>
 
-<div id="viewer-header">
-  <button id="backBtn">← Back to Search</button>
-  <div id="pdfTitle"></div>
-</div>
-  <iframe id="viewer"></iframe>
+<body>
+
+  <div id="viewer-header">
+    <button id="backBtn">← Back to Search</button>
+    <div id="pdfTitle"></div>
+  </div>
+
+  <div id="redirecting">Opening PDF…</div>
 
   <script>
-    const params = new URLSearchParams(window.location.search);
-    const id = params.get('id');
+    // Back button always returns to search page
+    document.getElementById('backBtn').addEventListener('click', () => {
+      window.location.href = 'index.html';
+    });
 
-    if (!id) {
-      document.body.textContent = "Missing PDF id.";
+    // Extract file ID
+    const params = new URLSearchParams(window.location.search);
+    const fileId = params.get('id');
+
+    // Display a simple title
+    document.getElementById('pdfTitle').textContent = `Document: ${fileId}`;
+
+    // Auto-redirect to Drive preview
+    if (fileId) {
+      const driveUrl = `https://drive.google.com/file/d/${fileId}/preview`;
+      window.location.href = driveUrl;
     } else {
-      const url = `https://drive.google.com/file/d/${id}/preview`;
-      document.getElementById('viewer').src = url;
+      document.getElementById('redirecting').textContent = "Missing file ID.";
     }
   </script>
-<script>
-  document.getElementById('backBtn').addEventListener('click', () => {
-    window.location.href = 'index.html';
-  });
-</script>
-<script>
-  // Back button behavior
-  document.getElementById('backBtn').addEventListener('click', () => {
-    window.location.href = 'index.html';
-  });
 
-  // Extract file ID from URL
-  const fileId = params.get('id');
-
-  // Display a readable title
-  // If you want something fancier later, we can fetch metadata via Apps Script.
-  document.getElementById('pdfTitle').textContent = `Document: ${fileId}`;
-</script>
 </body>
 </html>
