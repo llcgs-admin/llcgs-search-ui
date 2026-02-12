@@ -351,7 +351,9 @@ function renderResults(results, elapsedMs) {
       e.preventDefault();
 
       const fileId = rec.file_id;
-      const viewerUrl = `pdfviewer.html?id=${encodeURIComponent(fileId)}`;
+      const usePreview = document.getElementById('usePreviewToggle').checked;
+      const mode = usePreview ? 'preview' : 'view';
+      const viewerUrl = `pdfviewer.html?id=${encodeURIComponent(fileId)}&mode=${mode}`;
 
       const width = 900;
       const height = 700;
