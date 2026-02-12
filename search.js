@@ -63,6 +63,17 @@ function makeWordRegex(term) {
 }
 
 /************************************************************
+ * CLEAN TERMS (fixes OR substring leak)
+ ************************************************************/
+function cleanTerm(t) {
+  return t
+    .normalize("NFKC")
+    .replace(/[\u200B-\u200D\uFEFF]/g, "")   // zero‑width chars
+    .replace(/\s+/g, " ")                    // normalize whitespace
+    .trim();
+}
+
+/************************************************************
  * QUERY PARSER WITH ROBUST OR GROUPS
  ************************************************************/
 function parseQuery(raw) {
@@ -84,7 +95,7 @@ function parseQuery(raw) {
     if (/\bOR\b/i.test(inside)) {
       const parts = inside
         .split(/OR/i)
-        .map(s => s.trim())
+        .map(s => cleanTerm(s))
         .filter(s => s.length > 0);
 
       if (parts.length > 1) {
