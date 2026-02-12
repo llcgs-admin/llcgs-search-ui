@@ -76,23 +76,28 @@ function parseQuery(raw) {
   // Extract parentheses groups
   const parenRegex = /\(([^)]+)\)/g;
   let match;
+  const groupsToRemove = [];
+
   while ((match = parenRegex.exec(raw)) !== null) {
     const inside = match[1].trim();
 
-    // Detect OR inside the group
     if (/\bOR\b/i.test(inside)) {
       const parts = inside
         .split(/OR/i)
         .map(s => s.trim())
-        .filter(s => s.length > 0);   // remove empty OR terms
+        .filter(s => s.length > 0);
 
       if (parts.length > 1) {
         orGroups.push(parts);
-        q = q.replace(match[0], ''); // remove only valid OR groups
-        continue;
+        groupsToRemove.push(match[0]);
       }
     }
   }
+
+  // Remove OR groups AFTER phrase extraction
+  groupsToRemove.forEach(g => {
+    q = q.replace(g, " ");
+  });
 
   // Extract quoted phrases
   const phraseRegex = /"([^"]+)"/g;
@@ -105,7 +110,6 @@ function parseQuery(raw) {
   q.split(/\s+/).forEach(t => {
     if (!t) return;
 
-    // Ignore bare OR tokens
     if (t.toUpperCase() === 'OR') return;
 
     if (t.startsWith('-"') && t.endsWith('"')) {
@@ -186,7 +190,7 @@ function findMatches(text, terms) {
     while ((match = r.exec(lower)) !== null) {
       matches.push({
         index: match.index,
-        length: match[0].length   // correct length from actual match
+        length: match[0].length
       });
       r.lastIndex = match.index + match[0].length;
     }
@@ -237,13 +241,11 @@ function renderResults(results, elapsedMs) {
     const resultDiv = document.createElement('div');
     resultDiv.className = 'result';
 
-    /******** TITLE ********/
     const title = document.createElement('div');
     title.className = 'result-title';
     title.textContent = rec.title;
     resultDiv.appendChild(title);
 
-    /******** PAGE-GROUPED SNIPPETS ********/
     const pageGroups = [];
 
     rec.pages.forEach((pageText, idx) => {
@@ -304,7 +306,6 @@ function renderResults(results, elapsedMs) {
 
     resultDiv.appendChild(snippetContainer);
 
-    /******** SHOW ALL / FEWER ********/
     if (totalSnippets > 3) {
       const toggleBtn = document.createElement('button');
       toggleBtn.className = 'snippet-toggle';
@@ -331,7 +332,6 @@ function renderResults(results, elapsedMs) {
       resultDiv.appendChild(toggleBtn);
     }
 
-    /******** OPEN PDF LINK ********/
     const link = document.createElement('a');
     link.href = `pdfviewer.html?id=${encodeURIComponent(rec.file_id)}`;
     link.textContent = 'Open PDF';
