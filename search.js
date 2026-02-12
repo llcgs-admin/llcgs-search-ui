@@ -63,7 +63,7 @@ function makeWordRegex(term) {
 }
 
 /************************************************************
- * CLEAN TERMS (fixes OR substring leak)
+ * CLEAN TERMS
  ************************************************************/
 function cleanTerm(t) {
   return t
@@ -94,7 +94,7 @@ function parseQuery(raw) {
 
     if (/\bOR\b/i.test(inside)) {
       const parts = inside
-        .split(/OR/i)
+        .split(/\bOR\b/i)          // <-- FIX: split only on standalone OR
         .map(s => cleanTerm(s))
         .filter(s => s.length > 0);
 
@@ -110,18 +110,6 @@ function parseQuery(raw) {
     q = q.replace(g, " ");
   });
 
-  // Debug code
-    console.log("=== OR GROUP DEBUG START ===");
-    console.log("Raw query:", raw);
-    console.log("Extracted OR groups:", JSON.stringify(orGroups, null, 2));
-    orGroups.forEach((group, i) => {
-      group.forEach((term, j) => {
-        console.log(`OR term [${i}][${j}] raw:`, JSON.stringify(term));
-        console.log(`OR term [${i}][${j}] chars:`, [...term].map(c => c.charCodeAt(0)));
-      });
-    });
-    console.log("=== OR GROUP DEBUG END ===");
-      
   // Extract quoted phrases
   const phraseRegex = /"([^"]+)"/g;
   while ((match = phraseRegex.exec(q)) !== null) {
