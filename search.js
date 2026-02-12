@@ -59,7 +59,7 @@ async function loadIndex() {
  ************************************************************/
 function makeWordRegex(term) {
   const escaped = term.replace(/[.*+?^${}()|[\]\\]/g, "\\$&");
-  return new RegExp(`(?<![A-Za-z])${escaped}(?![A-Za-z])`, "i");
+  return new RegExp(`(?<![A-Za-z])${escaped}(?![A-Za-z])`, "gi");
 }
 
 /************************************************************
@@ -123,7 +123,7 @@ function parseQuery(raw) {
 function recordMatches(rec, parsed) {
   const hay = (rec.title + ' ' + rec.text).toLowerCase();
 
-  // Phrases (substring OK, but must match whole phrase)
+  // Phrases (substring OK)
   for (const p of parsed.phrases) {
     if (!hay.includes(p.toLowerCase())) return false;
   }
@@ -171,7 +171,7 @@ function searchIndex(rawQuery, neighborhoodFilter) {
 }
 
 /************************************************************
- * SNIPPET HELPERS
+ * SNIPPET HELPERS — FIXED MATCH LENGTH
  ************************************************************/
 function findMatches(text, terms) {
   const matches = [];
@@ -181,8 +181,11 @@ function findMatches(text, terms) {
     const r = makeWordRegex(term);
     let match;
     while ((match = r.exec(lower)) !== null) {
-      matches.push({ index: match.index, length: term.length });
-      r.lastIndex = match.index + term.length;
+      matches.push({
+        index: match.index,
+        length: match[0].length   // <-- FIXED (correct length)
+      });
+      r.lastIndex = match.index + match[0].length;
     }
   });
 
