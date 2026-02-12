@@ -1,279 +1,213 @@
-/************************************************************
- * LLCGS COLOR PALETTE
- ************************************************************/
-:root {
-  --llcgs-green: #2f4f2f;
-  --llcgs-green-dark: #244024;
-  --llcgs-gold: #c2a878;
-  --llcgs-cream: #f7f4e9;
-  --llcgs-charcoal: #333333;
-  --llcgs-border: #d8d2c4;
+/* ---------------------------------------------------------
+   GLOBAL RESET & BASE
+--------------------------------------------------------- */
+
+* {
+  box-sizing: border-box;
 }
 
-/************************************************************
- * GLOBAL
- ************************************************************/
 body {
   margin: 0;
   padding: 0;
-  background: var(--llcgs-cream);
-  color: var(--llcgs-charcoal);
-  font-family: "Verdana", "Arial", sans-serif;
+  font-family: system-ui, sans-serif;
+  background: #f7f7f7;
+  color: #222;
+  line-height: 1.5;
 }
 
-/************************************************************
- * HEADER
- ************************************************************/
-#site-header {
-  background: var(--llcgs-green);
+/* ---------------------------------------------------------
+   HEADER & FOOTER
+--------------------------------------------------------- */
+
+.site-header,
+.site-footer {
+  background: #003366;
   color: white;
-  padding: 20px 0;
+  padding: 15px 20px;
   text-align: center;
-  border-bottom: 4px solid var(--llcgs-gold);
 }
 
-#site-header h1 {
-  font-family: "Georgia", serif;
+.site-header h1 {
   margin: 0;
-  font-size: 2rem;
+  font-size: 1.8rem;
 }
 
-#site-header .subtitle {
-  font-size: 1rem;
-  margin-top: 4px;
-  opacity: 0.9;
+.site-footer p {
+  margin: 0;
+  font-size: 0.9rem;
 }
 
-.help-link {
-  margin-top: 8px;
-  font-size: 0.95rem;
-  cursor: pointer;
-  color: var(--llcgs-gold);
-  text-decoration: underline;
-}
+/* ---------------------------------------------------------
+   SEARCH CONTROLS
+--------------------------------------------------------- */
 
-.help-link:hover {
-  color: white;
-}
-
-/************************************************************
- * MAIN CONTAINER
- ************************************************************/
-#main-container {
-  max-width: 900px;
-  margin: 20px auto;
+.search-controls {
   background: white;
-  padding: 25px 30px;
-  border: 1px solid var(--llcgs-border);
-  border-radius: 6px;
-  box-shadow: 0 2px 6px rgba(0,0,0,0.05);
+  padding: 20px;
+  border-bottom: 1px solid #ddd;
 }
 
-/************************************************************
- * SEARCH CONTROLS
- ************************************************************/
-#search-controls {
-  margin-bottom: 20px;
+.search-row {
+  display: flex;
+  gap: 10px;
+  margin-bottom: 15px;
 }
 
-.control-label {
-  display: block;
-  margin-top: 12px;
-  margin-bottom: 4px;
-  font-weight: bold;
-  font-family: "Georgia", serif;
-  color: var(--llcgs-green);
-}
-
-input[type="text"],
-select {
-  width: 100%;
-  padding: 8px;
-  border: 1px solid var(--llcgs-border);
-  border-radius: 4px;
+#query {
+  flex: 1;
+  padding: 10px;
   font-size: 1rem;
-  background: #fff;
+  border: 1px solid #bbb;
+  border-radius: 4px;
 }
 
 #searchBtn {
-  margin-top: 15px;
-  padding: 10px 16px;
-  background: var(--llcgs-green);
+  padding: 10px 18px;
+  font-size: 1rem;
+  background: #003366;
   color: white;
   border: none;
   border-radius: 4px;
   cursor: pointer;
-  font-size: 1rem;
 }
 
 #searchBtn:hover {
-  background: var(--llcgs-green-dark);
+  background: #004080;
 }
 
-/************************************************************
- * RESULTS
- ************************************************************/
+.options-row {
+  display: flex;
+  align-items: center;
+  flex-wrap: wrap;
+  gap: 20px;
+}
+
+.options-row label {
+  font-size: 0.95rem;
+}
+
+/* ---------------------------------------------------------
+   RESULTS
+--------------------------------------------------------- */
+
+.results-container {
+  padding: 20px;
+}
+
 .result-header {
-  font-family: "Georgia", serif;
-  font-size: 1.1rem;
+  font-weight: bold;
   margin-bottom: 15px;
-  color: var(--llcgs-green);
+  font-size: 1.1rem;
 }
 
 .result {
-  border: 1px solid var(--llcgs-border);
   background: white;
+  border: 1px solid #ddd;
+  border-radius: 6px;
   padding: 15px;
-  margin-bottom: 15px;
-  border-radius: 4px;
+  margin-bottom: 20px;
 }
 
 .result-title {
-  font-family: "Georgia", serif;
-  font-size: 1.25rem;
+  font-size: 1.2rem;
+  font-weight: bold;
   margin-bottom: 10px;
-  color: var(--llcgs-green);
 }
 
-/************************************************************
- * PAGE GROUPS
- ************************************************************/
+/* ---------------------------------------------------------
+   PAGE HEADERS & SNIPPETS
+--------------------------------------------------------- */
+
 .page-header {
-  font-family: "Georgia", serif;
-  font-weight: bold;
+  background: #e9eef5;
+  padding: 6px 10px;
   margin-top: 10px;
+  border-radius: 4px;
   cursor: pointer;
-  color: var(--llcgs-green);
+  font-weight: 600;
   display: flex;
   align-items: center;
+  gap: 6px;
 }
 
-.page-header .arrow {
-  margin-right: 6px;
-  font-size: 0.9rem;
+.page-header:hover {
+  background: #dce6f3;
+}
+
+.arrow {
+  font-weight: bold;
+  color: #003366;
 }
 
 .page-block {
-  margin-left: 18px;
-  margin-top: 6px;
-}
-
-/************************************************************
- * SNIPPETS
- ************************************************************/
-.snippet {
-  margin-bottom: 6px;
-  line-height: 1.4;
-}
-
-.snippet-toggle {
-  margin-top: 10px;
-  padding: 6px 10px;
-  background: var(--llcgs-gold);
-  border: 1px solid var(--llcgs-border);
+  padding: 10px 12px;
+  border-left: 3px solid #003366;
+  margin-bottom: 10px;
+  background: #fafafa;
   border-radius: 4px;
-  cursor: pointer;
-  font-size: 0.9rem;
 }
 
-.snippet-toggle:hover {
-  background: #b89c6c;
+.snippet {
+  margin-bottom: 12px;
+  padding-bottom: 8px;
+  border-bottom: 1px dashed #ccc;
 }
 
-/************************************************************
- * HIGHLIGHTING
- ************************************************************/
+.snippet:last-child {
+  border-bottom: none;
+}
+
 mark {
-  background: var(--llcgs-gold);
+  background: #ffeb3b;
   padding: 0 2px;
   border-radius: 2px;
 }
 
-/************************************************************
- * FOOTER
- ************************************************************/
-#site-footer {
-  text-align: center;
-  padding: 20px 0;
-  margin-top: 30px;
-  background: var(--llcgs-green);
-  color: white;
-  border-top: 4px solid var(--llcgs-gold);
-}
+/* ---------------------------------------------------------
+   BUTTONS
+--------------------------------------------------------- */
 
-.footer-inner {
+.snippet-toggle {
+  margin-top: 10px;
+  padding: 6px 12px;
   font-size: 0.9rem;
-}
-
-/************************************************************
- * MODAL
- ************************************************************/
-.modal {
-  display: none;
-  position: fixed;
-  z-index: 2000;
-  left: 0;
-  top: 0;
-  width: 100%;
-  height: 100%;
-  overflow: auto;
-  background: rgba(0,0,0,0.4);
-}
-
-.modal-content {
-  background: white;
-  margin: 8% auto;
-  padding: 20px 30px;
-  border: 1px solid var(--llcgs-border);
-  border-radius: 6px;
-  max-width: 600px;
-  box-shadow: 0 2px 8px rgba(0,0,0,0.2);
-  font-size: 1rem;
-}
-
-.modal-content h2 {
-  font-family: "Georgia", serif;
-  color: var(--llcgs-green);
-  margin-top: 0;
-}
-
-.modal-close {
-  float: right;
-  font-size: 1.6rem;
+  background: #eee;
+  border: 1px solid #bbb;
+  border-radius: 4px;
   cursor: pointer;
-  color: var(--llcgs-charcoal);
 }
 
-.modal-close:hover {
-  color: var(--llcgs-green);
+.snippet-toggle:hover {
+  background: #e0e0e0;
 }
 
-.modal-content code {
-  background: var(--llcgs-cream);
-  padding: 2px 4px;
-  border-radius: 3px;
-  font-size: 0.95rem;
+a {
+  display: inline-block;
+  margin-top: 10px;
+  color: #003366;
+  font-weight: 600;
+  text-decoration: none;
 }
 
-/************************************************************
- * RESPONSIVE
- ************************************************************/
+a:hover {
+  text-decoration: underline;
+}
+
+/* ---------------------------------------------------------
+   RESPONSIVE
+--------------------------------------------------------- */
+
 @media (max-width: 600px) {
-  #main-container {
-    padding: 15px 20px;
+  .search-row {
+    flex-direction: column;
   }
 
-  #site-header h1 {
-    font-size: 1.6rem;
+  #searchBtn {
+    width: 100%;
   }
 
-  .result-title {
-    font-size: 1.1rem;
-  }
-
-  .modal-content {
-    width: 90%;
-    margin-top: 20%;
-    padding: 15px 20px;
+  .options-row {
+    flex-direction: column;
+    align-items: flex-start;
   }
 }
