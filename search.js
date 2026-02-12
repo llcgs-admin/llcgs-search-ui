@@ -79,9 +79,12 @@ function parseQuery(raw) {
   while ((match = parenRegex.exec(raw)) !== null) {
     const inside = match[1].trim();
 
-    // Detect OR inside the group (case-insensitive)
-    if (/ OR /i.test(inside)) {
-      const parts = inside.split(/OR/i).map(s => s.trim()).filter(Boolean);
+    // Detect OR inside the group
+    if (/\bOR\b/i.test(inside)) {
+      const parts = inside
+        .split(/OR/i)
+        .map(s => s.trim())
+        .filter(s => s.length > 0);   // remove empty OR terms
 
       if (parts.length > 1) {
         orGroups.push(parts);
@@ -183,7 +186,7 @@ function findMatches(text, terms) {
     while ((match = r.exec(lower)) !== null) {
       matches.push({
         index: match.index,
-        length: match[0].length   // <-- FIXED (correct length)
+        length: match[0].length   // correct length from actual match
       });
       r.lastIndex = match.index + match[0].length;
     }
