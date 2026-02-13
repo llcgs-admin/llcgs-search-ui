@@ -7,7 +7,7 @@ let INDEX = null;
  ************************************************************/
 const NEIGHBORHOOD_MAP = {
   "Box01": "Near South",
-  "Box02": "Yankee Hill",
+  "Box02": "Yankake Hill",
   "Box03": "South Salt Creek",
   "Box04": "North Bottoms",
   "Box05": "University Place",
@@ -94,7 +94,7 @@ function parseQuery(raw) {
 
     if (/\bOR\b/i.test(inside)) {
       const parts = inside
-        .split(/\bOR\b/i)          // <-- FIX: split only on standalone OR
+        .split(/\bOR\b/i)          // FIX: split only on standalone OR
         .map(s => cleanTerm(s))
         .filter(s => s.length > 0);
 
@@ -343,8 +343,11 @@ function renderResults(results, elapsedMs) {
       resultDiv.appendChild(toggleBtn);
     }
 
+    /************************************************************
+     * OPEN PDF — OPTION 2 LOGIC
+     ************************************************************/
     const link = document.createElement('a');
-    link.href = `pdfviewer.html?id=${encodeURIComponent(rec.file_id)}`;
+    link.href = "#";
     link.textContent = 'Open PDF';
 
     link.addEventListener('click', e => {
@@ -352,8 +355,16 @@ function renderResults(results, elapsedMs) {
 
       const fileId = rec.file_id;
       const usePreview = document.getElementById('usePreviewToggle').checked;
-      const mode = usePreview ? 'preview' : 'view';
-      const viewerUrl = `pdfviewer.html?id=${encodeURIComponent(fileId)}&mode=${mode}`;
+
+      if (!usePreview) {
+        // Full tab, true /view mode
+        const url = `https://drive.google.com/file/d/${fileId}/view`;
+        window.open(url, "_blank");
+        return;
+      }
+
+      // Popup, /preview mode
+      const url = `https://drive.google.com/file/d/${fileId}/preview`;
 
       const width = 900;
       const height = 700;
@@ -364,7 +375,7 @@ function renderResults(results, elapsedMs) {
       const windowName = multi ? '_blank' : 'pdfPopup';
 
       window.open(
-        viewerUrl,
+        url,
         windowName,
         `width=${width},height=${height},left=${left},top=${top},resizable=yes,scrollbars=yes`
       );
