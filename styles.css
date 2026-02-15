@@ -49,6 +49,19 @@ body {
   border-bottom: 2px solid #C9C6B8; /* soft olive-gray */
 }
 
+/* ---------------------------------------------------------
+   STICKY SEARCH CONTROLS
+--------------------------------------------------------- */
+
+.search-controls {
+  position: sticky;
+  top: 0;
+  z-index: 1500;
+  background: #FFFFFF; /* matches your parchment/white panel */
+  border-bottom: 2px solid #C9C6B8;
+  padding: 20px;
+}
+
 .search-row {
   display: flex;
   gap: 10px;
