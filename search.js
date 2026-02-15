@@ -7,7 +7,7 @@ let INDEX = null;
  ************************************************************/
 const NEIGHBORHOOD_MAP = {
   "Box01": "Near South",
-  "Box02": "Yankake Hill",
+  "Box02": "Yankee Hill",
   "Box03": "South Salt Creek",
   "Box04": "North Bottoms",
   "Box05": "University Place",
