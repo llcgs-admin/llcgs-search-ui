@@ -350,37 +350,41 @@ function renderResults(results, elapsedMs) {
     link.href = "#";
     link.textContent = 'Open PDF';
 
-    link.addEventListener('click', e => {
-      e.preventDefault();
+link.addEventListener('click', e => {
+  e.preventDefault();
 
-      const fileId = rec.file_id;
-      const usePreview = document.getElementById('usePreviewToggle').checked;
+  const fileId = rec.file_id;
+  const usePreview = document.getElementById('usePreviewToggle').checked;
+  const multi = document.getElementById('multiPopupToggle').checked;
 
-      if (!usePreview) {
-        // Full tab, true /view mode
-        const url = `https://drive.google.com/file/d/${fileId}/view`;
-        window.open(url, "_blank");
-        return;
-      }
+  if (!usePreview) {
+    // Full tab, true /view mode
+    const url = `https://drive.google.com/file/d/${fileId}/view`;
 
-      // Popup, /preview mode
-      const url = `https://drive.google.com/file/d/${fileId}/preview`;
+    // If multi is OFF → reuse same tab
+    // If multi is ON → open new tab each time
+    const windowName = multi ? "_blank" : "pdfTab";
 
-      const width = 900;
-      const height = 700;
-      const left = (screen.width - width) / 2;
-      const top = (screen.height - height) / 2;
+    window.open(url, windowName);
+    return;
+  }
 
-      const multi = document.getElementById('multiPopupToggle').checked;
-      const windowName = multi ? '_blank' : 'pdfPopup';
+  // Otherwise: popup using /preview mode
+  const url = `https://drive.google.com/file/d/${fileId}/preview`;
 
-      window.open(
-        url,
-        windowName,
-        `width=${width},height=${height},left=${left},top=${top},resizable=yes,scrollbars=yes`
-      );
-    });
+  const width = 900;
+  const height = 700;
+  const left = (screen.width - width) / 2;
+  const top = (screen.height - height) / 2;
 
+  const popupName = multi ? "_blank" : "pdfPopup";
+
+  window.open(
+    url,
+    popupName,
+    `width=${width},height=${height},left=${left},top=${top},resizable=yes,scrollbars=yes`
+  );
+});
     resultDiv.appendChild(link);
 
     container.appendChild(resultDiv);
