@@ -210,6 +210,48 @@ a:hover {
 }
 
 /* ---------------------------------------------------------
+   TOOLTIPS
+--------------------------------------------------------- */
+
+.tooltip {
+  position: relative;
+  display: inline-block;
+  cursor: help;
+}
+
+.tooltip-text {
+  visibility: hidden;
+  opacity: 0;
+  width: 260px;
+  background: #FDFBF4; /* parchment */
+  color: #2F4F2F;       /* forest green text */
+  border: 1px solid #C2A878; /* muted gold */
+  border-radius: 6px;
+  padding: 10px;
+  font-size: 0.85rem;
+  line-height: 1.4;
+  position: absolute;
+  z-index: 3000;
+  top: 120%;
+  left: 0;
+  box-shadow: 0 2px 6px rgba(0,0,0,0.15);
+  transition: opacity 0.2s ease-in-out;
+}
+
+.tooltip:hover .tooltip-text {
+  visibility: visible;
+  opacity: 1;
+}
+
+/* Mobile-friendly: tooltips appear above if screen is narrow */
+@media (max-width: 600px) {
+  .tooltip-text {
+    top: auto;
+    bottom: 120%;
+  }
+}
+
+/* ---------------------------------------------------------
    RESPONSIVE
 --------------------------------------------------------- */
 
