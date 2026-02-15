@@ -37,25 +37,35 @@
       <div class="options-row">
 
         <!-- Neighborhood filter -->
-        <label>
+        <label class="tooltip">
           Neighborhood:
           <select id="neighborhoodFilter">
             <option value="">All</option>
           </select>
+          <span class="tooltip-text">
+            Restrict results to a specific neighborhood based on transcript box number.
+          </span>
         </label>
-
+        
         <!-- Multi-PDF toggle -->
-        <label style="margin-left: 20px;">
+        <label class="tooltip" style="margin-left: 20px;">
           <input type="checkbox" id="multiPopupToggle">
           Allow multiple PDF windows
+          <span class="tooltip-text">
+            When checked, each PDF opens in a new window or tab.  
+            When unchecked, the same window/tab is reused.
+          </span>
         </label>
 
         <!-- NEW: Preview/view toggle -->
-        <label style="margin-left: 20px;">
+        <label class="tooltip" style="margin-left: 20px;">
           <input type="checkbox" id="usePreviewToggle" checked>
           Use preview mode
+          <span class="tooltip-text">
+            Preview mode opens PDFs in a popup using Google’s embedded viewer.  
+            Uncheck to open PDFs in a full browser tab using the native viewer.
+          </span>
         </label>
-
         <button id="helpBtn" class="help-button">Help</button>
 
       </div>
