@@ -56,6 +56,8 @@
           Use preview mode
         </label>
 
+        <button id="helpBtn" class="help-button">Help</button>
+
       </div>
 
     </section>
@@ -71,6 +73,38 @@
 
   <!-- Scripts -->
   <script type="module" src="search.js"></script>
+<div id="helpModal" class="modal">
+  <div class="modal-content">
+    <span id="closeHelp" class="close">&times;</span>
 
+    <h2>Search Help</h2>
+
+    <p><strong>Basic Terms:</strong><br>
+    Enter words to find exact whole‑word matches.</p>
+
+    <p><strong>Phrases:</strong><br>
+    Use quotes for exact phrases:<br>
+    <code>"north bottoms"</code></p>
+
+    <p><strong>OR Groups:</strong><br>
+    Use parentheses with OR as a standalone word:<br>
+    <code>(pastor OR minister)</code></p>
+
+    <p><strong>Excluding Terms:</strong><br>
+    Use a minus sign:<br>
+    <code>-church</code></p>
+
+    <p><strong>Combining:</strong><br>
+    <code>(pastor OR minister) "north bottoms" -funeral</code></p>
+
+    <p><strong>Neighborhood Filter:</strong><br>
+    Limits results to a specific neighborhood.</p>
+
+    <p><strong>Preview vs View:</strong><br>
+    • Preview mode → popup window (Google forces preview)<br>
+    • View mode → full browser tab (native PDF viewer)</p>
+
+  </div>
+</div>
 </body>
 </html>
