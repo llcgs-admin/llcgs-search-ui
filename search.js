@@ -409,6 +409,27 @@ document.getElementById('query').addEventListener('keydown', e => {
 });
 
 /************************************************************
+ * HELP MODAL
+ ************************************************************/
+const helpBtn = document.getElementById('helpBtn');
+const helpModal = document.getElementById('helpModal');
+const closeHelp = document.getElementById('closeHelp');
+
+helpBtn.addEventListener('click', () => {
+  helpModal.style.display = 'block';
+});
+
+closeHelp.addEventListener('click', () => {
+  helpModal.style.display = 'none';
+});
+
+window.addEventListener('click', e => {
+  if (e.target === helpModal) {
+    helpModal.style.display = 'none';
+  }
+});
+
+/************************************************************
  * INITIALIZE
  ************************************************************/
 loadIndex().then(data => {
