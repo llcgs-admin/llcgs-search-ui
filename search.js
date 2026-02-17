@@ -55,6 +55,44 @@ async function loadIndex() {
 }
 
 /************************************************************
+ * LOCAL SEARCH HISTORY
+ ************************************************************/
+function saveSearchHistory(query) {
+  const q = query.trim();
+  if (!q) return;
+
+  let history = JSON.parse(localStorage.getItem("searchHistory") || "[]");
+
+  // Avoid duplicates
+  history = history.filter(item => item !== q);
+
+  // Add to front
+  history.unshift(q);
+
+  // Keep last 20
+  if (history.length > 20) history.length = 20;
+
+  localStorage.setItem("searchHistory", JSON.stringify(history));
+}
+
+function loadSearchHistory() {
+  const dropdown = document.getElementById("historyDropdown");
+  if (!dropdown) return;
+
+  const history = JSON.parse(localStorage.getItem("searchHistory") || "[]");
+
+  // Clear old options except the placeholder
+  dropdown.innerHTML = '<option value="">Recent searches…</option>';
+
+  history.forEach(item => {
+    const opt = document.createElement("option");
+    opt.value = item;
+    opt.textContent = item;
+    dropdown.appendChild(opt);
+  });
+}
+
+/************************************************************
  * STRICT WHOLE-WORD MATCHING
  ************************************************************/
 function makeWordRegex(term) {
@@ -398,6 +436,9 @@ document.getElementById('searchBtn').addEventListener('click', () => {
   const q = document.getElementById('query').value;
   const neighborhood =
     document.getElementById('neighborhoodFilter')?.value || null;
+  
+  saveSearchHistory(q);
+  loadSearchHistory();
 
   const start = performance.now();
   const results = searchIndex(q, neighborhood);
@@ -410,6 +451,14 @@ document.getElementById('query').addEventListener('keydown', e => {
   if (e.key === 'Enter') {
     document.getElementById('searchBtn').click();
   }
+});
+
+document.getElementById("historyDropdown").addEventListener("change", e => {
+  const q = e.target.value;
+  if (!q) return;
+
+  document.getElementById("query").value = q;
+  document.getElementById("searchBtn").click();
 });
 
 /************************************************************
@@ -439,4 +488,5 @@ window.addEventListener('click', e => {
 loadIndex().then(data => {
   INDEX = data;
   populateNeighborhoodDropdown();
+  loadSearchHistory();
 });
