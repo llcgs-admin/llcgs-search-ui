@@ -81,6 +81,24 @@ body {
   outline: 2px solid #C2A878; /* muted gold */
 }
 
+/* ---------------------------------------------------------
+   SEARCH HISTORY DROPDOWN
+--------------------------------------------------------- */
+
+.history-dropdown {
+  padding: 10px;
+  font-size: 1rem;
+  border: 1px solid #C9C6B8; /* soft olive-gray */
+  border-radius: 4px;
+  background: #FDFBF4; /* parchment tint */
+  color: #2F4F2F; /* forest green */
+  max-width: 220px;
+}
+
+.history-dropdown:focus {
+  outline: 2px solid #C2A878; /* muted gold */
+}
+
 #searchBtn {
   padding: 10px 18px;
   font-size: 1rem;
