@@ -92,7 +92,7 @@ body {
   border-radius: 4px;
   background: #FDFBF4; /* parchment tint */
   color: #2F4F2F; /* forest green */
-  max-width: 220px;
+  /*max-width: 220px; */
 }
 
 .history-dropdown:focus {
