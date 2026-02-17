@@ -86,6 +86,7 @@ body {
 --------------------------------------------------------- */
 
 .history-dropdown {
+  flex: 1;
   padding: 10px;
   font-size: 1rem;
   border: 1px solid #C9C6B8; /* soft olive-gray */
