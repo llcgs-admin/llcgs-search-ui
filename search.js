@@ -168,7 +168,72 @@ function parseQuery(raw) {
     } else {
       terms.push(t);
     }
+  })function parseQuery(raw) {
+  const phrases = [];
+  const terms = [];
+  const excluded = [];
+  const orGroups = [];
+
+  let q = raw;
+
+  /************************************************************
+   * 1. Extract OR-groups FIRST, from q (not raw)
+   ************************************************************/
+  const parenRegex = /\(([^)]+)\)/g;
+  let match;
+  const groupsToRemove = [];
+
+  while ((match = parenRegex.exec(q)) !== null) {
+    const inside = match[1].trim();
+
+    // Detect OR inside the group
+    if (/\bOR\b/i.test(inside)) {
+      // Split on standalone OR
+      const parts = inside
+        .split(/\bOR\b/i)
+        .map(s => s.trim().replace(/^"|"$/g, "")) // remove quotes if present
+        .filter(Boolean);
+
+      if (parts.length > 1) {
+        orGroups.push(parts);
+        groupsToRemove.push(match[0]); // remove whole "( ... )"
+      }
+    }
+  }
+
+  // Remove OR groups BEFORE phrase extraction
+  groupsToRemove.forEach(g => {
+    q = q.replace(g, " ");
   });
+
+  /************************************************************
+   * 2. Extract quoted phrases
+   ************************************************************/
+  const phraseRegex = /"([^"]+)"/g;
+  while ((match = phraseRegex.exec(q)) !== null) {
+    phrases.push(match[1].trim());
+  }
+  q = q.replace(phraseRegex, " ");
+
+  /************************************************************
+   * 3. Extract remaining terms
+   ************************************************************/
+  q.split(/\s+/).forEach(t => {
+    if (!t) return;
+
+    if (t.toUpperCase() === "OR") return;
+
+    if (t.startsWith('-"') && t.endsWith('"')) {
+      excluded.push(t.slice(2, -1));
+    } else if (t.startsWith("-")) {
+      excluded.push(t.slice(1));
+    } else {
+      terms.push(t.replace(/^"|"$/g, ""));
+    }
+  });
+
+  return { phrases, terms, excluded, orGroups };
+};
 
   return { phrases, terms, excluded, orGroups };
 }
