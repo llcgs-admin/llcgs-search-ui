@@ -234,10 +234,7 @@ function parseQuery(raw) {
 
   return { phrases, terms, excluded, orGroups };
 };
-
-  return { phrases, terms, excluded, orGroups };
-}
-
+  
 /************************************************************
  * SEARCH LOGIC — STRICT WHOLE-WORD BOOLEAN MATCHING
  ************************************************************/
