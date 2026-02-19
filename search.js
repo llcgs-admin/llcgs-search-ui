@@ -114,61 +114,7 @@ function cleanTerm(t) {
 /************************************************************
  * QUERY PARSER WITH ROBUST OR GROUPS
  ************************************************************/
-function parseQuery(raw) {
-  const phrases = [];
-  const terms = [];
-  const excluded = [];
-  const orGroups = [];
-
-  let q = raw;
-
-  // Extract parentheses groups
-  const parenRegex = /\(([^)]+)\)/g;
-  let match;
-  const groupsToRemove = [];
-
-  while ((match = parenRegex.exec(raw)) !== null) {
-    const inside = match[1].trim();
-
-    if (/\bOR\b/i.test(inside)) {
-      const parts = inside
-        .split(/\bOR\b/i)          // FIX: split only on standalone OR
-        .map(s => cleanTerm(s))
-        .filter(s => s.length > 0);
-
-      if (parts.length > 1) {
-        orGroups.push(parts);
-        groupsToRemove.push(match[0]);
-      }
-    }
-  }
-
-  // Remove OR groups AFTER phrase extraction
-  groupsToRemove.forEach(g => {
-    q = q.replace(g, " ");
-  });
-
-  // Extract quoted phrases
-  const phraseRegex = /"([^"]+)"/g;
-  while ((match = phraseRegex.exec(q)) !== null) {
-    phrases.push(match[1].trim());
-  }
-  q = q.replace(phraseRegex, '');
-
-  // Remaining terms
-  q.split(/\s+/).forEach(t => {
-    if (!t) return;
-
-    if (t.toUpperCase() === 'OR') return;
-
-    if (t.startsWith('-"') && t.endsWith('"')) {
-      excluded.push(t.slice(2, -1));
-    } else if (t.startsWith('-')) {
-      excluded.push(t.slice(1));
-    } else {
-      terms.push(t);
-    }
-  })function parseQuery(raw) {
+  function parseQuery(raw) {
   const phrases = [];
   const terms = [];
   const excluded = [];
