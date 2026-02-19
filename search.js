@@ -160,6 +160,8 @@ function cleanTerm(t) {
     phrases.push(match[1].trim());
   }
   q = q.replace(phraseRegex, " ");
+  // NEW: remove leftover parentheses
+  q = q.replace(/[()]/g, " ");
 
   /************************************************************
    * 3. Extract remaining terms
