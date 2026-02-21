@@ -26,9 +26,10 @@ UI / UX
 
 📁 Repository Structure
 /
+|data/
+|     ├── index.json          # File index generated from Google Drive IDs
 ├── index.html          # Main search UI
 ├── search.js           # Boolean parser, search logic, snippet builder
-├── index.json          # File index generated from Google Drive IDs
 ├── favicon.ico         # Multi-resolution favicon
 ├── favicon-32x32.png   # Modern browser icon
 └── styles.css          # UI styling (if separate)
@@ -37,21 +38,21 @@ UI / UX
 
 🔧 How It Works
 - index.json is generated from the society’s Google Drive folder and contains:
-- File IDs
-- Titles
-- Page counts
-- Metadata
+  - File IDs
+  - Titles
+  - Page counts
+  - Metadata
 - search.js loads index.json and performs:
-- Tokenization
-- Boolean parsing
-- Whole‑word matching
-- Snippet extraction
+  - Tokenization
+  - Boolean parsing
+  - Whole‑word matching
+  - Snippet extraction
 - Results are displayed in index.html, with links to:
 https://drive.google.com/file/d/<FILE_ID>/view
 - The viewer page reads URL parameters to display:
-- Title
-- Page number
-- Return link
+  - Title
+  - Page number
+  - Return link
 
 🚀 Deployment
 This project is hosted using GitHub Pages.
