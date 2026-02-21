@@ -1,6 +1,8 @@
-LLCGS Search Interface
+Project Scope
+This search interface is specifically designed for the Lincoln Oral History Project, a collection of OCR‑processed interview transcripts organized by neighborhood and box number. The search logic, UI structure, and viewer integration are optimized for long‑form narrative documents. Other LLCGS collections (such as cemetery records, marriage records, and probate indexes) will require their own tailored search interfaces, as their structure and metadata differ significantly from the oral history corpus.
+
 A lightweight, volunteer‑friendly search interface for the Lincoln‑Lancaster County Genealogical Society (LLCGS).
-This project provides a clean, fast, browser‑based way to search the society’s digitized archival materials using whole‑word matching, Boolean logic, and clear PDF access.
+This project provides a clean, fast, browser‑based way to search the society’s Lincoln Oral History Transcripts using whole‑word matching, Boolean logic, and clear PDF access.
 
 🌿 Features
 Search Engine
