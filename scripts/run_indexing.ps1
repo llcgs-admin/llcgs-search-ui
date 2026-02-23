@@ -32,8 +32,8 @@ python scripts/build_index.py
 Write-Host "Index build complete.`n"
 
 # 4. Add audioId fields
-Write-Host "Running add_audio_id.py..."
-python scripts/add_audio_id.py
+Write-Host "Running AddAudioID.py..."
+python scripts/addaudioid.py
 Write-Host "Audio ID fields updated.`n"
 
 Write-Host "=== Indexing pipeline completed successfully ===" -ForegroundColor Green
