@@ -398,6 +398,15 @@ function renderResults(results, elapsedMs) {
     link.href = "#";
     link.textContent = 'Open PDF';
 
+    if (item.audioId) {
+    html += `
+        <button class="listen-audio" data-audio="${item.audioId}">
+            Listen
+        </button>
+        <div class="audio-player-container" id="audio-${item.audioId}" style="display:none;"></div>
+    `;
+    }
+
 link.addEventListener('click', e => {
   e.preventDefault();
 
@@ -469,6 +478,31 @@ document.getElementById("historyDropdown").addEventListener("change", e => {
 
   document.getElementById("query").value = q;
   document.getElementById("searchBtn").click();
+
+  /************************************************************
+ * LISTEN BUTTON HANDLER
+ ************************************************************/
+document.addEventListener('click', function (e) {
+    if (!e.target.classList.contains('listen-audio')) return;
+
+    const audioId = e.target.dataset.audio;
+    const container = document.getElementById(`audio-${audioId}`);
+
+    // Try inline HTML5 playback first
+    const directUrl = `https://drive.google.com/uc?export=download&id=${audioId}`;
+
+    container.innerHTML = `
+        <audio controls style="width:100%; margin-top:8px;">
+            <source src="${directUrl}" type="audio/mpeg">
+            Your browser does not support the audio element.
+        </audio>
+        <div style="font-size:0.85em; margin-top:4px;">
+            If playback fails, <a href="https://drive.google.com/file/d/${audioId}/view" target="_blank">open in Google Drive</a>.
+        </div>
+    `;
+
+    container.style.display = "block";
+});
 });
 
 /************************************************************
