@@ -390,7 +390,23 @@ function renderResults(results, elapsedMs) {
 
       resultDiv.appendChild(toggleBtn);
     }
+	/************************************************************
+	 * LISTEN BUTTON (if audioId exists)
+	 ************************************************************/
+	if (rec.audioId) {
+	  const listenBtn = document.createElement('button');
+	  listenBtn.className = 'listen-audio';
+	  listenBtn.dataset.audio = rec.audioId;
+	  listenBtn.textContent = 'Listen';
 
+	  const audioContainer = document.createElement('div');
+	  audioContainer.className = 'audio-player-container';
+	  audioContainer.id = `audio-${rec.audioId}`;
+	  audioContainer.style.display = 'none';
+
+	  resultDiv.appendChild(listenBtn);
+	  resultDiv.appendChild(audioContainer);
+	}
     /************************************************************
      * OPEN PDF — OPTION 2 LOGIC
      ************************************************************/
@@ -398,14 +414,6 @@ function renderResults(results, elapsedMs) {
     link.href = "#";
     link.textContent = 'Open PDF';
 
-    if (item.audioId) {
-    html += `
-        <button class="listen-audio" data-audio="${item.audioId}">
-            Listen
-        </button>
-        <div class="audio-player-container" id="audio-${item.audioId}" style="display:none;"></div>
-    `;
-    }
 
 link.addEventListener('click', e => {
   e.preventDefault();

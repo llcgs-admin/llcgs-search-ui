@@ -17,11 +17,11 @@ def update_index(path: Path, minify: bool = False):
 
     updated = 0
     for key, record in data.items():
+        # Only add audioId if missing entirely
         if "audioId" not in record:
             record["audioId"] = None
             updated += 1
 
-    # Write updated index
     with open(path, "w", encoding="utf-8") as f:
         if minify:
             json.dump(data, f, separators=(",", ":"), ensure_ascii=False)
