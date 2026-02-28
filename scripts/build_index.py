@@ -1,98 +1,81 @@
 import json
-import re
 from pathlib import Path
-from tqdm import tqdm
+import re
+
+CONFIG_FILE = "config.json"
 
 def load_config():
-    with open("config.json", "r", encoding="utf-8") as f:
+    with open(CONFIG_FILE, "r", encoding="utf-8") as f:
         return json.load(f)
 
-def load_pdf_map():
-    with open("pdf_map.json", "r", encoding="utf-8") as f:
-        return json.load(f)
+def tokenize(text):
+    tokens = re.findall(r"\b[a-zA-Z0-9']+\b", text.lower())
+    return tokens
 
-def tokenize(text, min_length=3):
-    tokens = re.findall(r"[A-Za-z0-9]+", text.lower())
-    return [t for t in tokens if len(t) >= min_length]
+def extract_snippets(pages, max_snippets=5):
+    snippets = []
+    for i, page in enumerate(pages):
+        clean = " ".join(page.split())
+        if clean:
+            snippets.append({"page": i + 1, "text": clean[:300]})
+        if len(snippets) >= max_snippets:
+            break
+    return snippets
 
 def main():
     config = load_config()
-    pdf_map = load_pdf_map()
 
-    text_folder = Path(config["text_folder"])
-    pdf_folder = Path(config["pdf_ocr_folder"])
-    index_folder = Path(config["index_folder"])
-    dist_folder = Path(config["dist_folder"])
+    text_folder = Path(config["text_folder"]).resolve()
+    index_folder = Path(config["index_folder"]).resolve()
+    dist_folder = Path(config["dist_folder"]).resolve()
 
     index_folder.mkdir(parents=True, exist_ok=True)
     dist_folder.mkdir(parents=True, exist_ok=True)
 
-    text_files = list(text_folder.rglob("*.txt"))
+    existing_index_path = index_folder / "index.json"
+    if existing_index_path.exists():
+        with open(existing_index_path, "r", encoding="utf-8") as f:
+            existing_index = json.load(f)
+            print("Loaded:",existing_index_path)
+    else:
+        existing_index = {}
+        print("No current index to load")
 
-    if not text_files:
-        print("No text files found in", text_folder)
-        return
+    new_index = {}
 
-    documents = {}
-    tokens = {}
+    for json_file in sorted(text_folder.glob("*.json")):
+        record_id = json_file.stem
+        print("Reading: ",json_file)
 
-    print(f"Building index from {len(text_files)} documents...")
+        with open(json_file, "r", encoding="utf-8") as f:
+            data = json.load(f)
 
-    for text_file in tqdm(text_files):
-        doc_id = text_file.stem
-        raw = text_file.read_text(encoding="utf-8")
+        full_text = data.get("full_text", "")
+        pages = data.get("pages", [])
 
-        # Parse JSON with full_text + pages
-        try:
-            data = json.loads(raw)
-            full_text = data.get("full_text", "")
-            pages = data.get("pages", [])
-        except json.JSONDecodeError:
-            full_text = raw
-            pages = [raw]
-
-        # Find PDF path
-        pdf_path_obj = next(pdf_folder.rglob(f"{doc_id}.pdf"), None)
-        pdf_path = str(pdf_path_obj).replace("\\", "/") if pdf_path_obj else ""
-
-        # Determine box name
-        box_name = pdf_path_obj.parent.name if pdf_path_obj else "Unknown"
-
-        # Attach file_id from pdf_map
-        file_id = pdf_map.get(pdf_path, None)
-
-        # Build document record
-        documents[doc_id] = {
-            "title": doc_id,
-            "box": box_name,
-            "pdf_path": pdf_path,
-            "file_id": file_id,
-            "text": full_text,
-            "pages": pages
+        record = {
+            "id": record_id,
+            "full_text": full_text,
+            "pages": pages,
+            "tokens": tokenize(full_text),
+            "snippets": extract_snippets(pages)
         }
+        
+        if record_id in existing_index and "audioId" in existing_index[record_id]:
+            record["audioId"] = existing_index[record_id]["audioId"]
+        else:
+            record["audioId"] = None
 
-        # Tokenization (optional for now)
-        token_list = tokenize(
-            full_text,
-            min_length=config.get("token_min_length", 3)
-        )
+        new_index[record_id] = record
 
-        for token in token_list:
-            if token not in tokens:
-                tokens[token] = {}
-            tokens[token][doc_id] = tokens[token].get(doc_id, 0) + 1
+    with open(index_folder / "index.json", "w", encoding="utf-8") as f:
+        print("Writing ", f.file)
+        json.dump(new_index, f, indent=2, ensure_ascii=False)
 
-    # FINAL OUTPUT: ONLY DOCUMENTS (flat dictionary)
-    output_path = index_folder / "index.json"
-    output_path.write_text(json.dumps(documents, indent=2, ensure_ascii=False), encoding="utf-8")
+    with open(dist_folder / "index.json", "w", encoding="utf-8") as f:
+        json.dump(new_index, f, separators=(",", ":"), ensure_ascii=False)
 
-    dist_output = dist_folder / "index.json"
-    dist_output.write_text(json.dumps(documents, ensure_ascii=False), encoding="utf-8")
-
-    print("Index built successfully.")
-    print("Output written to:")
-    print(" -", output_path)
-    print(" -", dist_output)
+    print("Index build complete.")
 
 if __name__ == "__main__":
     main()
