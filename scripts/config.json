@@ -1,10 +1,7 @@
 {
-  "index_folder": "work/index",
-  "pdf_map_folder": "work/pdf_map",
-  "dist_folder": "dist",
-  "text_folder": "../../source_text",
-  "pdf_folder": "../../source_pdfs",
-  "index_folder": "work/index",
-  "pdf_map_folder": "work/pdf_map",
-  "dist_folder": "dist"
+  "pdf_folder": "D:/source_pdfs",
+  "text_folder": "D:/source_text",
+  "index_folder": "D:/llcgs-loh/work/index",
+  "pdf_map_folder": "D:/llcgs-loh/work/pdf_map",
+  "dist_folder": "D:/llcgs-loh/dist"
 }

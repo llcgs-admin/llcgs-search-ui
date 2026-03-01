@@ -36,16 +36,13 @@ def main():
     if existing_index_path.exists():
         with open(existing_index_path, "r", encoding="utf-8") as f:
             existing_index = json.load(f)
-            print("Loaded:",existing_index_path)
     else:
         existing_index = {}
-        print("No current index to load")
 
     new_index = {}
 
     for json_file in sorted(text_folder.glob("*.json")):
         record_id = json_file.stem
-        print("Reading: ",json_file)
 
         with open(json_file, "r", encoding="utf-8") as f:
             data = json.load(f)
@@ -60,7 +57,7 @@ def main():
             "tokens": tokenize(full_text),
             "snippets": extract_snippets(pages)
         }
-        
+
         if record_id in existing_index and "audioId" in existing_index[record_id]:
             record["audioId"] = existing_index[record_id]["audioId"]
         else:
@@ -69,7 +66,6 @@ def main():
         new_index[record_id] = record
 
     with open(index_folder / "index.json", "w", encoding="utf-8") as f:
-        print("Writing ", f.file)
         json.dump(new_index, f, indent=2, ensure_ascii=False)
 
     with open(dist_folder / "index.json", "w", encoding="utf-8") as f:
