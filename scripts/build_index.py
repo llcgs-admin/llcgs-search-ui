@@ -1,77 +1,58 @@
-import json
+import os
 from pathlib import Path
-import re
+from tqdm import tqdm
 
-CONFIG_FILE = "config.json"
+from utils import (
+    load_config,
+    resolve_path,
+    write_pretty_json,
+    write_minified_json,
+    list_files,
+)
 
-def load_config():
-    with open(CONFIG_FILE, "r", encoding="utf-8") as f:
-        return json.load(f)
 
-def tokenize(text):
-    tokens = re.findall(r"\b[a-zA-Z0-9']+\b", text.lower())
-    return tokens
+def build_document_record(text_path):
+    """
+    Build a single record for the index.
+    This is intentionally simple and can be expanded later.
+    """
+    with open(text_path, "r", encoding="utf-8") as f:
+        text = f.read()
 
-def extract_snippets(pages, max_snippets=5):
-    snippets = []
-    for i, page in enumerate(pages):
-        clean = " ".join(page.split())
-        if clean:
-            snippets.append({"page": i + 1, "text": clean[:300]})
-        if len(snippets) >= max_snippets:
-            break
-    return snippets
+    return {
+        "id": text_path.stem,
+        "text": text,
+        "source": text_path.name,
+    }
+
 
 def main():
     config = load_config()
 
-    text_folder = Path(config["text_folder"]).resolve()
-    index_folder = Path(config["index_folder"]).resolve()
-    dist_folder = Path(config["dist_folder"]).resolve()
+    text_folder = resolve_path(__file__, config["text_folder"])
+    output_pretty = resolve_path(__file__, config["index_output"])
+    output_min = resolve_path(__file__, config["dist_index_output"])
 
-    index_folder.mkdir(parents=True, exist_ok=True)
-    dist_folder.mkdir(parents=True, exist_ok=True)
+    text_files = list_files(text_folder, extensions=[".txt"])
 
-    existing_index_path = index_folder / "index.json"
-    if existing_index_path.exists():
-        with open(existing_index_path, "r", encoding="utf-8") as f:
-            existing_index = json.load(f)
-    else:
-        existing_index = {}
+    print(f"Building index from {len(text_files)} text files...")
 
-    new_index = {}
+    index_records = []
 
-    for json_file in sorted(text_folder.glob("*.json")):
-        record_id = json_file.stem
+    for text_path in tqdm(text_files, desc="Indexing"):
+        record = build_document_record(text_path)
+        index_records.append(record)
 
-        with open(json_file, "r", encoding="utf-8") as f:
-            data = json.load(f)
+    index_data = {
+        "documents": index_records,
+        "count": len(index_records),
+    }
 
-        full_text = data.get("full_text", "")
-        pages = data.get("pages", [])
-
-        record = {
-            "id": record_id,
-            "full_text": full_text,
-            "pages": pages,
-            "tokens": tokenize(full_text),
-            "snippets": extract_snippets(pages)
-        }
-
-        if record_id in existing_index and "audioId" in existing_index[record_id]:
-            record["audioId"] = existing_index[record_id]["audioId"]
-        else:
-            record["audioId"] = None
-
-        new_index[record_id] = record
-
-    with open(index_folder / "index.json", "w", encoding="utf-8") as f:
-        json.dump(new_index, f, indent=2, ensure_ascii=False)
-
-    with open(dist_folder / "index.json", "w", encoding="utf-8") as f:
-        json.dump(new_index, f, separators=(",", ":"), ensure_ascii=False)
+    write_pretty_json(index_data, output_pretty)
+    write_minified_json(index_data, output_min)
 
     print("Index build complete.")
+
 
 if __name__ == "__main__":
     main()

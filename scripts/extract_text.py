@@ -1,51 +1,54 @@
-import json
+import os
 from pathlib import Path
-import PyPDF2
+from tqdm import tqdm
+from PyPDF2 import PdfReader
 
-CONFIG_FILE = "config.json"
+from utils import load_config, resolve_path, ensure_parent_folder
 
-def load_config():
-    with open(CONFIG_FILE, "r", encoding="utf-8") as f:
-        return json.load(f)
 
-def extract_pdf_to_json(pdf_path: Path, output_path: Path):
-    pages = []
-    full_text_parts = []
+def extract_text_from_pdf(pdf_path):
+    """
+    Extract text from a PDF using PyPDF2.
+    Returns a single string containing all pages.
+    """
+    try:
+        reader = PdfReader(str(pdf_path))
+    except Exception as e:
+        print(f"Error opening {pdf_path.name}: {e}")
+        return ""
 
-    with open(pdf_path, "rb") as f:
-        reader = PyPDF2.PdfReader(f)
+    text_chunks = []
+    for page in reader.pages:
+        try:
+            text_chunks.append(page.extract_text() or "")
+        except Exception:
+            text_chunks.append("")
 
-        for page in reader.pages:
-            text = page.extract_text() or ""
-            pages.append(text)
-            full_text_parts.append(text)
+    return "\n".join(text_chunks)
 
-    data = {
-        "full_text": "\n".join(full_text_parts),
-        "pages": pages
-    }
-
-    with open(output_path, "w", encoding="utf-8") as f:
-        json.dump(data, f, indent=2, ensure_ascii=False)
 
 def main():
     config = load_config()
 
-    pdf_folder = Path(config["pdf_folder"]).resolve()
-    text_folder = Path(config["text_folder"]).resolve()
+    pdf_folder = resolve_path(__file__, config["pdf_folder"])
+    text_folder = resolve_path(__file__, config["text_folder"])
 
-    text_folder.mkdir(parents=True, exist_ok=True)
-    
-    print(pdf_folder)
+    ensure_parent_folder(text_folder)
 
-    for pdf_file in pdf_folder.rglob("*.pdf"):
-        base = pdf_file.stem
-        output_file = text_folder / f"{base}.json"
+    pdf_files = [p for p in Path(pdf_folder).iterdir() if p.suffix.lower() == ".pdf"]
 
-        print(f"Extracting {pdf_file.name} → {output_file.name}")
-        extract_pdf_to_json(pdf_file, output_file)
+    print(f"Extracting text from {len(pdf_files)} PDFs...")
 
-    print("Extraction complete.")
+    for pdf_path in tqdm(pdf_files, desc="Extracting"):
+        output_path = Path(text_folder) / (pdf_path.stem + ".txt")
+
+        text = extract_text_from_pdf(pdf_path)
+
+        with open(output_path, "w", encoding="utf-8") as f:
+            f.write(text)
+
+    print("Text extraction complete.")
+
 
 if __name__ == "__main__":
     main()
