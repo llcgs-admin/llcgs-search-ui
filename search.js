@@ -39,7 +39,7 @@ function populateNeighborhoodDropdown() {
  ************************************************************/
 async function loadIndex() {
   try {
-    const response = await fetch('data/index.json');
+    const response = await fetch('dist/index.json');
     if (!response.ok) throw new Error(`Failed to load index.json: ${response.status}`);
 
     const data = await response.json();
