@@ -1,5 +1,6 @@
 import subprocess
 from pathlib import Path
+import sys
 
 
 def run_script(script_name):
@@ -9,7 +10,7 @@ def run_script(script_name):
     script_path = Path(__file__).parent / script_name
     print(f"\n=== Running {script_name} ===")
     result = subprocess.run(
-        ["python", str(script_path)],
+        [sys.executable, str(script_path)],
         capture_output=True,
         text=True,
     )
