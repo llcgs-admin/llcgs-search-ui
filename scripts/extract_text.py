@@ -1,30 +1,28 @@
-import os
+import PyPDF2
 from pathlib import Path
 from tqdm import tqdm
-from PyPDF2 import PdfReader
 
-from utils import load_config, resolve_path, ensure_parent_folder
+from utils import (
+    load_config,
+    resolve_path,
+    list_files,
+)
 
 
-def extract_text_from_pdf(pdf_path):
-    """
-    Extract text from a PDF using PyPDF2.
-    Returns a single string containing all pages.
-    """
-    try:
-        reader = PdfReader(str(pdf_path))
-    except Exception as e:
-        print(f"Error opening {pdf_path.name}: {e}")
-        return ""
+def extract_pdf_to_text(pdf_path):
+    """Extract text from each page and join with form-feed markers."""
+    reader = PyPDF2.PdfReader(str(pdf_path))
+    pages = []
 
-    text_chunks = []
     for page in reader.pages:
         try:
-            text_chunks.append(page.extract_text() or "")
-        except Exception:
-            text_chunks.append("")
+            text = page.extract_text() or ""
+        except Exception as e:
+            text = f"[Error extracting page: {e}]"
+        pages.append(text)
 
-    return "\n".join(text_chunks)
+    # Insert form-feed between pages so the indexer can split accurately
+    return "\f".join(pages)
 
 
 def main():
@@ -33,19 +31,24 @@ def main():
     pdf_folder = resolve_path(__file__, config["pdf_folder"])
     text_folder = resolve_path(__file__, config["text_folder"])
 
-    ensure_parent_folder(text_folder)
-
-    pdf_files = [p for p in Path(pdf_folder).iterdir() if p.suffix.lower() == ".pdf"]
+    pdf_files = list_files(pdf_folder, extensions=[".pdf"])
 
     print(f"Extracting text from {len(pdf_files)} PDFs...")
 
     for pdf_path in tqdm(pdf_files, desc="Extracting"):
-        output_path = Path(text_folder) / (pdf_path.stem + ".txt")
+        rel_path = pdf_path.relative_to(pdf_folder)
+        out_path = text_folder / rel_path.with_suffix(".txt")
 
-        text = extract_text_from_pdf(pdf_path)
+        out_path.parent.mkdir(parents=True, exist_ok=True)
 
-        with open(output_path, "w", encoding="utf-8") as f:
-            f.write(text)
+        if out_path.exists():
+            continue
+
+        try:
+            full_text = extract_pdf_to_text(pdf_path)
+            out_path.write_text(full_text, encoding="utf-8")
+        except Exception as e:
+            print(f"Error extracting {pdf_path}: {e}")
 
     print("Text extraction complete.")
 
