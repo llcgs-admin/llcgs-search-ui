@@ -1,7 +1,10 @@
 {
   "pdf_folder": "D:/source_pdfs",
   "text_folder": "D:/source_text",
-  "index_folder": "D:/llcgs-loh/work/index",
-  "pdf_map_folder": "D:/llcgs-loh/work/pdf_map",
-  "dist_folder": "D:/llcgs-loh/dist"
+
+  "index_output": "D:/llcgs-loh/work/index/index.json",
+  "pdf_map_output": "D:/llcgs-loh/work/pdf_map/pdf_map.json",
+
+  "dist_index_output": "D:/llcgs-loh/dist/index.json",
+  "dist_pdf_map_output": "D:/llcgs-loh/dist/pdf_map.json"
 }

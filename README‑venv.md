@@ -228,3 +228,71 @@ Tips for maintainability- Keep functions small and focused.
 - Keep error messages clear so volunteers can diagnose issues quickly.
 - Prefer explicit, readable code over clever one‑liners.
 
+
+Pipeline readiness checklist
+This checklist helps ensure that the indexing pipeline will run cleanly and produce valid JSON for the UI. Volunteers should complete these steps before running sync_all.py.
+Configuration and environment
+- The virtual environment is activated using D:\venv\Scripts\activate.
+- config.json contains the correct absolute paths for PDFs, OCR text, and all JSON outputs.
+- requirements.txt is installed and up to date with the current environment.
+- The llcgs-loh/scripts/ folder contains the full set of refactored scripts, including utils.py and validate_all.py.
+Folder structure
+- D:/source_pdfs/ contains the original PDFs.
+- D:/source_text/ contains OCR text files, one per PDF.
+- D:/llcgs-loh/work/index/ and D:/llcgs-loh/work/pdf_map/ exist and are writable.
+- D:/llcgs-loh/dist/ exists and is writable.
+Data completeness
+- Every PDF in source_pdfs/ has a matching .txt file in source_text/.
+- No orphan .txt files exist without a corresponding PDF.
+- All PDFs open without errors.
+- All text files are readable.
+JSON output expectations
+- Pretty JSON will be written to llcgs-loh/work/.
+- Minified JSON will be written to llcgs-loh/dist/.
+- The UI loads JSON only from dist/.
+Validation step
+- python validate_all.py runs without errors.
+- All [OK] checks pass.
+- No [ERROR] messages appear for paths, readability, or data completeness.
+Final confirmation
+- GitHub Desktop shows no unexpected changes.
+- The volunteer understands that sync_all.py will:
+- regenerate all OCR text (if needed),
+- rebuild the index,
+- rebuild the PDF map,
+- update the UI‑ready JSON in dist/.
+
+
+Running the pipeline during normal development
+Volunteers follow a short, repeatable sequence whenever new PDFs, new OCR text, or updated metadata need to be incorporated into the search interface. The goal is to ensure that the authoritative JSON in work/ and the UI‑ready JSON in dist/ stay synchronized and valid.
+Environment setup
+- Activate the virtual environment using D:\venv\Scripts\activate.
+- Confirm that llcgs-loh/scripts/requirements.txt is installed and up to date.
+- Ensure that config.json contains the correct absolute paths for all inputs and outputs.
+Preparing source data
+- Place new PDFs into D:/source_pdfs/.
+- Place matching OCR text files into D:/source_text/.
+- Confirm that filenames match exactly (e.g., Smith_Interview.pdf → Smith_Interview.txt).
+Validating readiness
+- Run python validate_all.py from inside llcgs-loh/scripts/.
+- Confirm that all [OK] checks pass for:
+- folder existence,
+- folder writability,
+- PDF/text completeness,
+- file readability.
+- Resolve any [ERROR] messages before continuing.
+Running the pipeline
+- Execute python sync_all.py to run the full sequence:
+- extract text (if needed),
+- build the index,
+- build the PDF map,
+- update the UI‑ready JSON in dist/.
+Reviewing results
+- Inspect the updated JSON in llcgs-loh/work/ for readability and completeness.
+- Confirm that the minified JSON in llcgs-loh/dist/ is present and valid.
+- Open search.html in a browser to verify that the UI loads the new data without errors.
+Committing changes
+- Open GitHub Desktop and review the updated files in llcgs-loh/dist/.
+- Commit with a clear message describing the update.
+- Push to the appropriate branch (usually dev).
+
