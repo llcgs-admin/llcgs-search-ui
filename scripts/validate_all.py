@@ -47,8 +47,8 @@ def validate_data_completeness(pdf_folder, text_folder):
     pdf_folder = Path(pdf_folder)
     text_folder = Path(text_folder)
 
-    pdf_files = sorted([p for p in pdf_folder.iterdir() if p.suffix.lower() == ".pdf"])
-    text_files = sorted([p for p in text_folder.iterdir() if p.suffix.lower() == ".txt"])
+    pdf_files = sorted([p for p in pdf_folder.rglob("*.pdf")])
+    text_files = sorted([p for p in text_folder.rglob("*.txt")])
 
     pdf_stems = {p.stem for p in pdf_files}
     text_stems = {t.stem for t in text_files}

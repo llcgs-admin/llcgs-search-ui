@@ -63,15 +63,11 @@ def load_json(path):
 
 
 def list_files(folder, extensions=None):
-    """
-    Return a list of files in a folder, optionally filtered by extension.
-    extensions: list like [".pdf", ".txt"]
-    """
     folder = Path(folder)
     if not folder.exists():
         return []
 
     if extensions is None:
-        return [p for p in folder.iterdir() if p.is_file()]
+        return [p for p in folder.rglob("*") if p.is_file()]
 
-    return [p for p in folder.iterdir() if p.suffix.lower() in extensions]
+    return [p for p in folder.rglob("*") if p.suffix.lower() in extensions]
