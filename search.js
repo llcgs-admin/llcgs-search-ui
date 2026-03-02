@@ -43,9 +43,11 @@ async function loadIndex() {
     if (!response.ok) throw new Error(`Failed to load index.json: ${response.status}`);
 
     const data = await response.json();
-    console.log(`Index loaded (${Object.keys(data).length} records).`);
 
-    return Object.values(data);
+    // Correct: use the "records" array
+    console.log(`Index loaded (${data.count} records).`);
+
+    return data.records;
 
   } catch (err) {
     console.error('Error loading index.json:', err);
