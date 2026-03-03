@@ -189,20 +189,21 @@ function cleanTerm(t) {
  * SEARCH LOGIC — STRICT WHOLE-WORD BOOLEAN MATCHING
  ************************************************************/
 function recordMatches(rec, parsed) {
-  const hay = (rec.title + ' ' + rec.text).toLowerCase();
+  // Use full_text as the searchable haystack
+  const hay = (rec.full_text || "").toLowerCase();
 
-  // Phrases (substring OK)
+  // 1. Phrases (substring match)
   for (const p of parsed.phrases) {
     if (!hay.includes(p.toLowerCase())) return false;
   }
 
-  // Standalone terms (whole-word only)
+  // 2. Standalone terms (whole-word)
   for (const t of parsed.terms) {
     const r = makeWordRegex(t);
     if (!r.test(hay)) return false;
   }
 
-  // OR groups (at least one term must match whole-word)
+  // 3. OR groups (at least one term must match)
   for (const group of parsed.orGroups) {
     let ok = false;
     for (const g of group) {
@@ -215,29 +216,50 @@ function recordMatches(rec, parsed) {
     if (!ok) return false;
   }
 
-  // Excluded terms (whole-word)
+  // 4. Excluded terms (whole-word)
   for (const ex of parsed.excluded) {
     const r = makeWordRegex(ex);
     if (r.test(hay)) return false;
   }
 
   return true;
+}/************************************************************
+ * SEARCH INDEX (token-based)
+ ************************************************************/
+function searchIndex(query, neighborhoodFilter) {
+  if (!query || !query.trim()) return [];
+
+  const q = query.toLowerCase().trim();
+  const qTokens = q.split(/\s+/)
+                   .map(t => t.replace(/[^a-z0-9']/g, ''))
+                   .filter(Boolean);
+
+  const results = [];
+
+  for (const rec of INDEX) {
+    // Neighborhood filter
+    if (neighborhoodFilter) {
+      const box = rec.source.split("/")[0]; // e.g. "Box03"
+      const hood = NEIGHBORHOOD_MAP[box] || null;
+      if (hood !== neighborhoodFilter) continue;
+    }
+
+    if (!rec.tokens) continue;
+
+    // Token scoring
+    let score = 0;
+    for (const qt of qTokens) {
+      if (rec.tokens.includes(qt)) score++;
+    }
+
+    if (score > 0) {
+      results.push({ record: rec, score });
+    }
+  }
+
+  results.sort((a, b) => b.score - a.score);
+  return results.map(r => r.record);
 }
-
-function searchIndex(rawQuery, neighborhoodFilter) {
-  if (!INDEX) return [];
-
-  const parsed = parseQuery(rawQuery);
-  const q = rawQuery.trim();
-  if (!q) return [];
-
-  return INDEX.filter(rec => {
-    const neighborhood = NEIGHBORHOOD_MAP[rec.box] || "Unknown";
-    if (neighborhoodFilter && neighborhood !== neighborhoodFilter) return false;
-    return recordMatches(rec, parsed);
-  });
-}
-
 /************************************************************
  * SNIPPET HELPERS — FIXED MATCH LENGTH
  ************************************************************/
@@ -304,7 +326,7 @@ function renderResults(results, elapsedMs) {
 
     const title = document.createElement('div');
     title.className = 'result-title';
-    title.textContent = rec.title;
+    title.textContent = rec.id;
     resultDiv.appendChild(title);
 
     const pageGroups = [];
@@ -433,7 +455,6 @@ link.addEventListener('click', e => {
     const windowName = multi ? "_blank" : "pdfTab";
 
     window.open(url, windowName);
-    return;
   }
 
   // Otherwise: popup using /preview mode
