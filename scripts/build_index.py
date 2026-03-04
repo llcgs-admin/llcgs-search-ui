@@ -68,8 +68,14 @@ def build_record(txt_path, pdf_folder, text_folder, pdf_map):
     rel_pdf = rel_txt.with_suffix(".pdf")
     rel_pdf_str = str(rel_pdf).replace("\\", "/")
 
-    # Lookup Drive file ID
-    file_id = pdf_map.get(rel_pdf_str)
+    # ------------------------------------------------------------
+    # MATCH THE APPS SCRIPT MAP EXACTLY
+    # Apps Script keys look like:
+    #   LLCGS Public PDFs/work/pdf_ocr/BoxNN/FILENAME.pdf
+    # ------------------------------------------------------------
+    drive_key = f"LLCGS Public PDFs/work/pdf_ocr/{rel_pdf_str}"
+
+    file_id = pdf_map.get(drive_key)
 
     # Load text
     full_text = txt_path.read_text(encoding="utf-8", errors="ignore")
@@ -84,8 +90,8 @@ def build_record(txt_path, pdf_folder, text_folder, pdf_map):
         "tokens": tokens,
         "snippets": [snippet],
         "audioId": None,
-        "file_id": file_id,
-        "source": rel_pdf_str
+        "file_id": file_id,          # ← now correctly populated
+        "source": rel_pdf_str        # ← local relative PDF path
     }
 
 # ------------------------------------------------------------
@@ -101,7 +107,7 @@ def main():
     output_pretty = resolve_path(__file__, config["index_output"])
     output_min = resolve_path(__file__, config["dist_index_output"])
 
-    # Load PDF → Drive ID map
+    # Load Drive ID map
     with open(pdf_map_path, "r", encoding="utf-8") as f:
         pdf_map = json.load(f)
 

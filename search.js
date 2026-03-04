@@ -562,6 +562,7 @@ window.addEventListener('click', e => {
  ************************************************************/
 loadIndex().then(data => {
   INDEX = data;
+  window.INDEX = INDEX;
   populateNeighborhoodDropdown();
   loadSearchHistory();
 });
