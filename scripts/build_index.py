@@ -69,12 +69,10 @@ def build_record(txt_path, pdf_folder, text_folder, pdf_map):
     rel_pdf_str = str(rel_pdf).replace("\\", "/")
 
     # ------------------------------------------------------------
-    # MATCH THE APPS SCRIPT MAP EXACTLY
-    # Apps Script keys look like:
-    #   LLCGS Public PDFs/work/pdf_ocr/BoxNN/FILENAME.pdf
+    # MATCH YOUR NEW PDF MAP EXACTLY:
+    #   "work/pdf_ocr/BoxNN/FILENAME.pdf"
     # ------------------------------------------------------------
-    drive_key = f"LLCGS Public PDFs/work/pdf_ocr/{rel_pdf_str}"
-
+    drive_key = f"work/pdf_ocr/{rel_pdf_str}"
     file_id = pdf_map.get(drive_key)
 
     # Load text
