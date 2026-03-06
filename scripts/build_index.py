@@ -60,7 +60,7 @@ def make_snippet(text, length=240):
 # ------------------------------------------------------------
 # Build a single index record
 # ------------------------------------------------------------
-def build_record(txt_path, pdf_folder, text_folder, pdf_map):
+def build_record(txt_path, pdf_map, audio_map, text_folder):
     rel_txt = txt_path.relative_to(text_folder)
     record_id = txt_path.stem
 
@@ -68,12 +68,21 @@ def build_record(txt_path, pdf_folder, text_folder, pdf_map):
     rel_pdf = rel_txt.with_suffix(".pdf")
     rel_pdf_str = str(rel_pdf).replace("\\", "/")
 
+    # Convert .txt → .mp3
+    rel_audio = rel_txt.with_suffix(".mp3")
+    rel_audio_str = str(rel_audio).replace("\\", "/")
+
     # ------------------------------------------------------------
-    # MATCH YOUR NEW PDF MAP EXACTLY:
-    #   "work/pdf_ocr/BoxNN/FILENAME.pdf"
+    # PDF lookup
     # ------------------------------------------------------------
-    drive_key = f"work/pdf_ocr/{rel_pdf_str}"
-    file_id = pdf_map.get(drive_key)
+    pdf_key = f"work/pdf_ocr/{rel_pdf_str}"
+    file_id = pdf_map.get(pdf_key)
+
+    # ------------------------------------------------------------
+    # AUDIO lookup
+    # ------------------------------------------------------------
+    audio_key = f"work/audio/{rel_audio_str}"
+    audio_id = audio_map.get(audio_key)
 
     # Load text
     full_text = txt_path.read_text(encoding="utf-8", errors="ignore")
@@ -87,9 +96,9 @@ def build_record(txt_path, pdf_folder, text_folder, pdf_map):
         "pages": pages,
         "tokens": tokens,
         "snippets": [snippet],
-        "audioId": None,
-        "file_id": file_id,          # ← now correctly populated
-        "source": rel_pdf_str        # ← local relative PDF path
+        "file_id": file_id,      # PDF Drive ID
+        "audioId": audio_id,     # Audio Drive ID
+        "source": rel_pdf_str
     }
 
 # ------------------------------------------------------------
@@ -99,15 +108,19 @@ def main():
     config = load_config()
 
     text_folder = resolve_path(__file__, config["text_folder"])
-    pdf_folder = resolve_path(__file__, config["pdf_folder"])
     pdf_map_path = resolve_path(__file__, config["pdf_map"])
+    audio_map_path = resolve_path(__file__, config["audio_map"])
 
     output_pretty = resolve_path(__file__, config["index_output"])
     output_min = resolve_path(__file__, config["dist_index_output"])
 
-    # Load Drive ID map
+    # Load PDF map
     with open(pdf_map_path, "r", encoding="utf-8") as f:
         pdf_map = json.load(f)
+
+    # Load Audio map
+    with open(audio_map_path, "r", encoding="utf-8") as f:
+        audio_map = json.load(f)
 
     txt_files = list_files(text_folder, extensions=[".txt"])
 
@@ -116,7 +129,7 @@ def main():
     records = []
     for txt_path in tqdm(txt_files, desc="Indexing"):
         try:
-            record = build_record(txt_path, pdf_folder, text_folder, pdf_map)
+            record = build_record(txt_path, pdf_map, audio_map, text_folder)
             records.append(record)
         except Exception as e:
             print(f"Error indexing {txt_path}: {e}")
