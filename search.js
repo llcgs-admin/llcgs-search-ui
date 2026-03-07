@@ -189,14 +189,25 @@ function openPdfForRecord(rec) {
     const usePreview = document.getElementById("usePreviewToggle")?.checked;
 
     let url;
-    if (usePreview) {
-        url = `https://drive.google.com/file/d/${rec.file_id}/preview`;
-    } else {
-        url = `https://drive.google.com/uc?export=download&id=${rec.file_id}`;
-    }
+    let target;
 
-    const target = multi ? "_blank" : "pdfWindow";
-    window.open(url, target);
+    if (usePreview) {
+        // PREVIEW MODE → popup using /preview
+        url = `https://drive.google.com/file/d/${rec.file_id}/preview`;
+
+        // Multi-window toggle applies here
+        target = multi ? "_blank" : "pdfPopup";
+
+        window.open(url, target, "width=900,height=1100");
+    } else {
+        // VIEW MODE → new tab using /view (never download)
+        url = `https://drive.google.com/file/d/${rec.file_id}/view`;
+
+        // Multi-window toggle applies here too
+        target = multi ? "_blank" : "pdfTab";
+
+        window.open(url, target);
+    }
 }
 
 function openAudioForRecord(rec) {
@@ -257,11 +268,30 @@ function setupEventHandlers() {
             openPdfForRecord(rec);
         }
 
-        if (target.classList.contains("open-audio")) {
-            const id = target.dataset.id;
-            const rec = findRecordById(id);
-            openAudioForRecord(rec);
-        }
+		 if (target.classList.contains("open-audio")) {
+			const id = target.dataset.id;
+			const rec = findRecordById(id);
+			if (!rec || !rec.audioId) return;
+
+			const container = target.closest(".result").querySelector(".audio-container");
+
+			if (!container) return;
+
+			const directUrl = `https://drive.google.com/uc?export=download&id=${rec.audioId}`;
+			const fallbackUrl = `https://drive.google.com/file/d/${rec.audioId}/preview`;
+
+			container.innerHTML = `
+				<audio controls style="width:100%; margin-top:8px;">
+					<source src="${directUrl}" type="audio/mpeg">
+					Your browser does not support the audio element.
+				</audio>
+				<div style="font-size:0.85em; margin-top:4px;">
+					If playback fails, <a href="${fallbackUrl}" target="_blank">open in Google Drive</a>.
+				</div>
+			`;
+
+			container.style.display = "block";
+		}
 
         if (target.classList.contains("snippet-toggle")) {
             const id = target.dataset.id;
