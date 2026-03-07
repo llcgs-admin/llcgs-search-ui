@@ -1,568 +1,170 @@
-//import { API_BASE } from './config.js';
+// ============================================================
+// GLOBAL STATE
+// ============================================================
+let INDEX = [];
+let LAST_RESULTS = [];
+let SEARCH_HISTORY = [];
 
-let INDEX = null;
+// Expose INDEX for debugging
+window.INDEX = INDEX;
 
-/************************************************************
- * NEIGHBORHOOD MAP
- ************************************************************/
-const NEIGHBORHOOD_MAP = {
-  "Box01": "Near South",
-  "Box02": "Yankee Hill",
-  "Box03": "South Salt Creek",
-  "Box04": "North Bottoms",
-  "Box05": "University Place",
-  "Box06": "University Place",
-  "Box07": "College View",
-  "Box08": "College View",
-  "Box09": "East Campus",
-  "Box10": "East Campus"
-};
+// ============================================================
+// INITIALIZATION
+// ============================================================
+document.addEventListener("DOMContentLoaded", async () => {
+    await loadConfig();
+    await loadIndex();
+    loadSearchHistory();
+    setupEventHandlers();
+});
 
-/************************************************************
- * POPULATE NEIGHBORHOOD DROPDOWN
- ************************************************************/
-function populateNeighborhoodDropdown() {
-  const select = document.getElementById('neighborhoodFilter');
-  if (!select) return;
+let CONFIG = null;
 
-  const neighborhoods = [...new Set(Object.values(NEIGHBORHOOD_MAP))];
-  neighborhoods.sort().forEach(n => {
-    const opt = document.createElement('option');
-    opt.value = n;
-    opt.textContent = n;
-    select.appendChild(opt);
-  });
+async function loadConfig() {
+    try {
+        const res = await fetch("config.json");
+        CONFIG = await res.json();
+        console.log("Config loaded:", CONFIG);
+    } catch (err) {
+        console.error("Failed to load config.json", err);
+    }
 }
 
-/************************************************************
- * LOAD INDEX
- ************************************************************/
+// Load index.json using CONFIG
 async function loadIndex() {
-  try {
-    const response = await fetch('dist/index.json');
-    if (!response.ok) throw new Error(`Failed to load index.json: ${response.status}`);
+    try {
+        if (!CONFIG || !CONFIG.index_path) {
+            throw new Error("CONFIG.index_path missing");
+        }
 
-    const data = await response.json();
+        const res = await fetch(CONFIG.index_path);
+        const data = await res.json();
 
-    // Correct: use the "records" array
-    console.log(`Index loaded (${data.count} records).`);
+        INDEX = data.records || [];
+        window.INDEX = INDEX; // debugging
 
-    return data.records;
+        console.log(`Index loaded (${INDEX.length} records).`);
+    } catch (err) {
+        console.error("Failed to load index.json", err);
+    }
+}
+// ============================================================
+// SEARCH ENGINE (PURE LOGIC)
+// ============================================================
+function runSearch(query, neighborhood = null) {
+    if (!query.trim()) return [];
 
-  } catch (err) {
-    console.error('Error loading index.json:', err);
-    alert('Unable to load the search index. Please try again later.');
-    return [];
-  }
+    const terms = query.toLowerCase().split(/\s+/).filter(Boolean);
+
+    return INDEX.filter(rec => {
+        // Neighborhood filter
+        if (neighborhood && !rec.source.includes(neighborhood)) return false;
+
+        // Boolean AND search across tokens
+        return terms.every(t => rec.tokens.includes(t));
+    });
 }
 
-/************************************************************
- * LOCAL SEARCH HISTORY
- ************************************************************/
+// ============================================================
+// RENDERING
+// ============================================================
+function renderResults(results) {
+    const container = document.getElementById("results");
+    container.innerHTML = "";
+
+    if (!results.length) {
+        container.innerHTML = `<p class="no-results">No results found.</p>`;
+        return;
+    }
+
+    results.forEach(rec => {
+        const div = document.createElement("div");
+        div.className = "result";
+
+        const pdfBtn = rec.file_id
+            ? `<button class="open-pdf" data-id="${rec.file_id}">Open PDF</button>`
+            : `<button class="open-pdf disabled">No PDF</button>`;
+
+        const audioBtn = rec.audioId
+            ? `<button class="open-audio" data-id="${rec.audioId}">Play Audio</button>`
+            : `<button class="open-audio disabled">No Audio</button>`;
+
+        div.innerHTML = `
+            <div class="result-header">
+                <span class="result-id">${rec.id}</span>
+            </div>
+
+            <div class="result-snippet">
+                ${rec.snippets[0] || ""}
+            </div>
+
+            <div class="result-actions">
+                ${pdfBtn}
+                ${audioBtn}
+            </div>
+        `;
+
+        container.appendChild(div);
+    });
+}
+
+// ============================================================
+// EVENT HANDLERS
+// ============================================================
+function setupEventHandlers() {
+    // Search form
+    document.getElementById("searchForm").addEventListener("submit", e => {
+        e.preventDefault();
+        const query = document.getElementById("query").value;
+        const neighborhood = document.getElementById("neighborhood").value || null;
+
+        LAST_RESULTS = runSearch(query, neighborhood);
+        renderResults(LAST_RESULTS);
+
+        saveSearchHistory(query);
+    });
+
+    // PDF + Audio buttons (event delegation)
+    document.addEventListener("click", e => {
+        if (e.target.classList.contains("open-pdf")) {
+            const id = e.target.dataset.id;
+            if (id) window.open(`https://drive.google.com/file/d/${id}/preview`, "_blank");
+        }
+
+        if (e.target.classList.contains("open-audio")) {
+            const id = e.target.dataset.id;
+            if (id) window.open(`https://drive.google.com/file/d/${id}/preview`, "_blank");
+        }
+    });
+}
+
+// ============================================================
+// SEARCH HISTORY
+// ============================================================
 function saveSearchHistory(query) {
-  const q = query.trim();
-  if (!q) return;
+    if (!query.trim()) return;
 
-  let history = JSON.parse(localStorage.getItem("searchHistory") || "[]");
+    SEARCH_HISTORY.unshift(query);
+    SEARCH_HISTORY = SEARCH_HISTORY.slice(0, 20);
 
-  // Avoid duplicates
-  history = history.filter(item => item !== q);
-
-  // Add to front
-  history.unshift(q);
-
-  // Keep last 20
-  if (history.length > 20) history.length = 20;
-
-  localStorage.setItem("searchHistory", JSON.stringify(history));
+    localStorage.setItem("searchHistory", JSON.stringify(SEARCH_HISTORY));
+    loadSearchHistory();
 }
 
 function loadSearchHistory() {
-  const dropdown = document.getElementById("historyDropdown");
-  if (!dropdown) return;
+    const stored = localStorage.getItem("searchHistory");
+    SEARCH_HISTORY = stored ? JSON.parse(stored) : [];
 
-  const history = JSON.parse(localStorage.getItem("searchHistory") || "[]");
+    const list = document.getElementById("history");
+    if (!list) return;
 
-  // Clear old options except the placeholder
-  dropdown.innerHTML = '<option value="">Recent searches…</option>';
+    list.innerHTML = SEARCH_HISTORY
+        .map(q => `<li class="history-item">${q}</li>`)
+        .join("");
 
-  history.forEach(item => {
-    const opt = document.createElement("option");
-    opt.value = item;
-    opt.textContent = item;
-    dropdown.appendChild(opt);
-  });
-}
-
-/************************************************************
- * STRICT WHOLE-WORD MATCHING
- ************************************************************/
-function makeWordRegex(term) {
-  const escaped = term.replace(/[.*+?^${}()|[\]\\]/g, "\\$&");
-  return new RegExp(`(?<![A-Za-z])${escaped}(?![A-Za-z])`, "gi");
-}
-
-/************************************************************
- * CLEAN TERMS
- ************************************************************/
-function cleanTerm(t) {
-  return t
-    .normalize("NFKC")
-    .replace(/[\u200B-\u200D\uFEFF]/g, "")   // zero‑width chars
-    .replace(/\s+/g, " ")                    // normalize whitespace
-    .trim();
-}
-
-/************************************************************
- * QUERY PARSER WITH ROBUST OR GROUPS
- ************************************************************/
-  function parseQuery(raw) {
-  const phrases = [];
-  const terms = [];
-  const excluded = [];
-  const orGroups = [];
-
-  let q = raw;
-
-  /************************************************************
-   * 1. Extract OR-groups FIRST, from q (not raw)
-   ************************************************************/
-  const parenRegex = /\(([^)]+)\)/g;
-  let match;
-  const groupsToRemove = [];
-
-  while ((match = parenRegex.exec(q)) !== null) {
-    const inside = match[1].trim();
-
-    // Detect OR inside the group
-    if (/\bOR\b/i.test(inside)) {
-      // Split on standalone OR
-      const parts = inside
-        .split(/\bOR\b/i)
-        .map(s => s.trim().replace(/^"|"$/g, "")) // remove quotes if present
-        .filter(Boolean);
-
-      if (parts.length > 1) {
-        orGroups.push(parts);
-        groupsToRemove.push(match[0]); // remove whole "( ... )"
-      }
-    }
-  }
-
-  // Remove OR groups BEFORE phrase extraction
-  groupsToRemove.forEach(g => {
-    q = q.replace(g, " ");
-  });
-
-  /************************************************************
-   * 2. Extract quoted phrases
-   ************************************************************/
-  const phraseRegex = /"([^"]+)"/g;
-  while ((match = phraseRegex.exec(q)) !== null) {
-    phrases.push(match[1].trim());
-  }
-  q = q.replace(phraseRegex, " ");
-  // NEW: remove leftover parentheses
-  q = q.replace(/[()]/g, " ");
-
-  /************************************************************
-   * 3. Extract remaining terms
-   ************************************************************/
-  q.split(/\s+/).forEach(t => {
-    if (!t) return;
-
-    if (t.toUpperCase() === "OR") return;
-
-    if (t.startsWith('-"') && t.endsWith('"')) {
-      excluded.push(t.slice(2, -1));
-    } else if (t.startsWith("-")) {
-      excluded.push(t.slice(1));
-    } else {
-      terms.push(t.replace(/^"|"$/g, ""));
-    }
-  });
-
-  return { phrases, terms, excluded, orGroups };
-};
-  
-/************************************************************
- * SEARCH LOGIC — STRICT WHOLE-WORD BOOLEAN MATCHING
- ************************************************************/
-function recordMatches(rec, parsed) {
-  // Use full_text as the searchable haystack
-  const hay = (rec.full_text || "").toLowerCase();
-
-  // 1. Phrases (substring match)
-  for (const p of parsed.phrases) {
-    if (!hay.includes(p.toLowerCase())) return false;
-  }
-
-  // 2. Standalone terms (whole-word)
-  for (const t of parsed.terms) {
-    const r = makeWordRegex(t);
-    if (!r.test(hay)) return false;
-  }
-
-  // 3. OR groups (at least one term must match)
-  for (const group of parsed.orGroups) {
-    let ok = false;
-    for (const g of group) {
-      const r = makeWordRegex(g);
-      if (r.test(hay)) {
-        ok = true;
-        break;
-      }
-    }
-    if (!ok) return false;
-  }
-
-  // 4. Excluded terms (whole-word)
-  for (const ex of parsed.excluded) {
-    const r = makeWordRegex(ex);
-    if (r.test(hay)) return false;
-  }
-
-  return true;
-}/************************************************************
- * SEARCH INDEX (token-based)
- ************************************************************/
-function searchIndex(query, neighborhoodFilter) {
-  if (!query || !query.trim()) return [];
-
-  const q = query.toLowerCase().trim();
-  const qTokens = q.split(/\s+/)
-                   .map(t => t.replace(/[^a-z0-9']/g, ''))
-                   .filter(Boolean);
-
-  const results = [];
-
-  for (const rec of INDEX) {
-    // Neighborhood filter
-    if (neighborhoodFilter) {
-      const box = rec.source.split("/")[0]; // e.g. "Box03"
-      const hood = NEIGHBORHOOD_MAP[box] || null;
-      if (hood !== neighborhoodFilter) continue;
-    }
-
-    if (!rec.tokens) continue;
-
-    // Token scoring
-    let score = 0;
-    for (const qt of qTokens) {
-      if (rec.tokens.includes(qt)) score++;
-    }
-
-    if (score > 0) {
-      results.push({ record: rec, score });
-    }
-  }
-
-  results.sort((a, b) => b.score - a.score);
-  return results.map(r => r.record);
-}
-/************************************************************
- * SNIPPET HELPERS — FIXED MATCH LENGTH
- ************************************************************/
-function findMatches(text, terms) {
-  const matches = [];
-  const lower = text.toLowerCase();
-
-  terms.forEach(term => {
-    const r = makeWordRegex(term);
-    let match;
-    while ((match = r.exec(lower)) !== null) {
-      matches.push({
-        index: match.index,
-        length: match[0].length
-      });
-      r.lastIndex = match.index + match[0].length;
-    }
-  });
-
-  return matches.sort((a, b) => a.index - b.index);
-}
-
-function buildSnippet(text, match, radius = 80) {
-  const start = Math.max(0, match.index - radius);
-  const end = Math.min(text.length, match.index + match.length + radius);
-
-  let snippet = text.slice(start, end).trim();
-  if (start > 0) snippet = "…" + snippet;
-  if (end < text.length) snippet = snippet + "…";
-
-  return snippet;
-}
-
-function highlightTerms(text, terms) {
-  if (!terms.length) return text;
-
-  const escaped = terms.map(t => t.replace(/[.*+?^${}()|[\]\\]/g, "\\$&"));
-  const regex = new RegExp(`(?<![A-Za-z])(${escaped.join("|")})(?![A-Za-z])`, "gi");
-
-  return text.replace(regex, m => `<mark>${m}</mark>`);
-}
-
-/************************************************************
- * RENDER RESULTS
- ************************************************************/
-function renderResults(results, elapsedMs) {
-  const container = document.getElementById('results');
-  container.innerHTML = '';
-
-  const header = document.createElement('div');
-  header.className = 'result-header';
-  header.textContent = `Found ${results.length} results in ${elapsedMs} ms`;
-  container.appendChild(header);
-
-  if (!results.length) return;
-
-  const rawQuery = document.getElementById('query').value.trim();
-  const parsed = parseQuery(rawQuery);
-  const allTerms = [...parsed.terms, ...parsed.phrases, ...parsed.orGroups.flat()];
-
-  for (const rec of results) {
-    const resultDiv = document.createElement('div');
-    resultDiv.className = 'result';
-
-    const title = document.createElement('div');
-    title.className = 'result-title';
-    title.textContent = rec.id;
-    resultDiv.appendChild(title);
-
-    const pageGroups = [];
-
-    rec.pages.forEach((pageText, idx) => {
-      const matches = findMatches(pageText, allTerms);
-      if (matches.length === 0) return;
-
-      const snippets = matches.map(m => {
-        let sn = buildSnippet(pageText, m);
-        sn = highlightTerms(sn, allTerms);
-        return sn;
-      });
-
-      pageGroups.push({
-        page: idx + 1,
-        snippets
-      });
-    });
-
-    const snippetContainer = document.createElement('div');
-    snippetContainer.className = 'snippet-container';
-
-    const totalSnippets = pageGroups.reduce(
-      (sum, pg) => sum + pg.snippets.length,
-      0
-    );
-    let showingAll = false;
-
-    pageGroups.forEach((pg, i) => {
-      const pageHeader = document.createElement('div');
-      pageHeader.className = 'page-header';
-      pageHeader.textContent = `Page ${pg.page} (${pg.snippets.length} matches)`;
-
-      const arrow = document.createElement('span');
-      arrow.className = 'arrow';
-      arrow.textContent = i === 0 ? '▼' : '▶';
-      pageHeader.prepend(arrow);
-
-      const pageBlock = document.createElement('div');
-      pageBlock.className = 'page-block';
-      pageBlock.style.display = i === 0 ? 'block' : 'none';
-
-      pageHeader.addEventListener('click', () => {
-        const open = pageBlock.style.display === 'block';
-        pageBlock.style.display = open ? 'none' : 'block';
-        arrow.textContent = open ? '▶' : '▼';
-      });
-
-      pg.snippets.forEach(sn => {
-        const snDiv = document.createElement('div');
-        snDiv.className = 'snippet';
-        snDiv.innerHTML = sn;
-        pageBlock.appendChild(snDiv);
-      });
-
-      snippetContainer.appendChild(pageHeader);
-      snippetContainer.appendChild(pageBlock);
-    });
-
-    resultDiv.appendChild(snippetContainer);
-
-    if (totalSnippets > 3) {
-      const toggleBtn = document.createElement('button');
-      toggleBtn.className = 'snippet-toggle';
-      toggleBtn.textContent = 'Show all snippets';
-
-      toggleBtn.addEventListener('click', () => {
-        showingAll = !showingAll;
-
-        const blocks = snippetContainer.querySelectorAll('.page-block');
-        blocks.forEach(block => {
-          block.style.display = showingAll ? 'block' : 'none';
+    list.querySelectorAll(".history-item").forEach(item => {
+        item.addEventListener("click", () => {
+            document.getElementById("query").value = item.textContent;
         });
-
-        const arrows = snippetContainer.querySelectorAll('.arrow');
-        arrows.forEach(a => {
-          a.textContent = showingAll ? '▼' : '▶';
-        });
-
-        toggleBtn.textContent = showingAll
-          ? 'Show fewer snippets'
-          : 'Show all snippets';
-      });
-
-      resultDiv.appendChild(toggleBtn);
-    }
-	/************************************************************
-	 * LISTEN BUTTON (if audioId exists)
-	 ************************************************************/
-	if (rec.audioId) {
-	  const listenBtn = document.createElement('button');
-	  listenBtn.className = 'listen-audio';
-	  listenBtn.dataset.audio = rec.audioId;
-	  listenBtn.textContent = 'Listen';
-
-	  const audioContainer = document.createElement('div');
-	  audioContainer.className = 'audio-player-container';
-	  audioContainer.id = `audio-${rec.audioId}`;
-	  audioContainer.style.display = 'none';
-
-	  resultDiv.appendChild(listenBtn);
-	  resultDiv.appendChild(audioContainer);
-	}
-    /************************************************************
-     * OPEN PDF — OPTION 2 LOGIC
-     ************************************************************/
-    const link = document.createElement('a');
-    link.href = "#";
-    link.textContent = 'Open PDF';
-
-
-link.addEventListener('click', e => {
-  e.preventDefault();
-
-  const fileId = rec.file_id;
-  const usePreview = document.getElementById('usePreviewToggle').checked;
-  const multi = document.getElementById('multiPopupToggle').checked;
-
-  if (!usePreview) {
-    // Full tab, true /view mode
-    const url = `https://drive.google.com/file/d/${fileId}/view`;
-
-    // If multi is OFF → reuse same tab
-    // If multi is ON → open new tab each time
-    const windowName = multi ? "_blank" : "pdfTab";
-
-    window.open(url, windowName);
-  }
-
-  // Otherwise: popup using /preview mode
-  const url = `https://drive.google.com/file/d/${fileId}/preview`;
-
-  const width = 900;
-  const height = 700;
-  const left = (screen.width - width) / 2;
-  const top = (screen.height - height) / 2;
-
-  const popupName = multi ? "_blank" : "pdfPopup";
-
-  window.open(
-    url,
-    popupName,
-    `width=${width},height=${height},left=${left},top=${top},resizable=yes,scrollbars=yes`
-  );
-});
-    resultDiv.appendChild(link);
-
-    container.appendChild(resultDiv);
-  }
+    });
 }
-
-/************************************************************
- * EVENT HANDLERS
- ************************************************************/
-document.getElementById('searchBtn').addEventListener('click', () => {
-  const q = document.getElementById('query').value;
-  const neighborhood =
-    document.getElementById('neighborhoodFilter')?.value || null;
-  
-  saveSearchHistory(q);
-  loadSearchHistory();
-
-  const start = performance.now();
-  const results = searchIndex(q, neighborhood);
-  const elapsed = Math.round(performance.now() - start);
-
-  renderResults(results, elapsed);
-});
-
-document.getElementById('query').addEventListener('keydown', e => {
-  if (e.key === 'Enter') {
-    document.getElementById('searchBtn').click();
-  }
-});
-
-document.getElementById("historyDropdown").addEventListener("change", e => {
-  const q = e.target.value;
-  if (!q) return;
-
-  document.getElementById("query").value = q;
-  document.getElementById("searchBtn").click();
-
-  /************************************************************
- * LISTEN BUTTON HANDLER
- ************************************************************/
-document.addEventListener('click', function (e) {
-    if (!e.target.classList.contains('listen-audio')) return;
-
-    const audioId = e.target.dataset.audio;
-    const container = document.getElementById(`audio-${audioId}`);
-
-    // Try inline HTML5 playback first
-    const directUrl = `https://drive.google.com/uc?export=download&id=${audioId}`;
-
-    container.innerHTML = `
-        <audio controls style="width:100%; margin-top:8px;">
-            <source src="${directUrl}" type="audio/mpeg">
-            Your browser does not support the audio element.
-        </audio>
-        <div style="font-size:0.85em; margin-top:4px;">
-            If playback fails, <a href="https://drive.google.com/file/d/${audioId}/view" target="_blank">open in Google Drive</a>.
-        </div>
-    `;
-
-    container.style.display = "block";
-});
-});
-
-/************************************************************
- * HELP MODAL
- ************************************************************/
-const helpBtn = document.getElementById('helpBtn');
-const helpModal = document.getElementById('helpModal');
-const closeHelp = document.getElementById('closeHelp');
-
-helpBtn.addEventListener('click', () => {
-  helpModal.style.display = 'block';
-});
-
-closeHelp.addEventListener('click', () => {
-  helpModal.style.display = 'none';
-});
-
-window.addEventListener('click', e => {
-  if (e.target === helpModal) {
-    helpModal.style.display = 'none';
-  }
-});
-
-/************************************************************
- * INITIALIZE
- ************************************************************/
-loadIndex().then(data => {
-  INDEX = data;
-  window.INDEX = INDEX;
-  populateNeighborhoodDropdown();
-  loadSearchHistory();
-});
