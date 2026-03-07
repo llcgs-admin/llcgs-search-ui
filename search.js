@@ -135,6 +135,10 @@ function renderResults(results) {
                     ${pdfBtn}
                     ${audioBtn}
                 </div>
+				
+				<!-- REQUIRED FOR INLINE AUDIO -->
+				<div class="audio-container" style="display:none;"></div>
+
             </article>
         `;
     });
@@ -268,31 +272,39 @@ function setupEventHandlers() {
             openPdfForRecord(rec);
         }
 
-		 if (target.classList.contains("open-audio")) {
+		if (target.classList.contains("open-audio")) {
 			const id = target.dataset.id;
 			const rec = findRecordById(id);
 			if (!rec || !rec.audioId) return;
 
-			const container = target.closest(".result").querySelector(".audio-container");
+			const resultEl = target.closest(".result");
+			const container = resultEl.querySelector(".audio-container");
+			const isOpen = container.style.display === "block";
 
-			if (!container) return;
+			if (isOpen) {
+				// CLOSE AUDIO
+				container.style.display = "none";
+				container.innerHTML = "";
+				target.textContent = "Play Audio";
+				return;
+			}
 
-			const directUrl = `https://drive.google.com/uc?export=download&id=${rec.audioId}`;
-			const fallbackUrl = `https://drive.google.com/file/d/${rec.audioId}/preview`;
+			// OPEN AUDIO
+			const previewUrl = `https://drive.google.com/file/d/${rec.audioId}/preview`;
 
 			container.innerHTML = `
-				<audio controls style="width:100%; margin-top:8px;">
-					<source src="${directUrl}" type="audio/mpeg">
-					Your browser does not support the audio element.
-				</audio>
-				<div style="font-size:0.85em; margin-top:4px;">
-					If playback fails, <a href="${fallbackUrl}" target="_blank">open in Google Drive</a>.
-				</div>
+				<iframe
+					src="${previewUrl}"
+					width="100%"
+					height="80"
+					allow="autoplay"
+					style="border:0; margin-top:8px;">
+				</iframe>
 			`;
 
 			container.style.display = "block";
+			target.textContent = "Close Audio";
 		}
-
         if (target.classList.contains("snippet-toggle")) {
             const id = target.dataset.id;
             const expanded = target.dataset.expanded === "true";
