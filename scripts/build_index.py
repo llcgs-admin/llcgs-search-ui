@@ -49,15 +49,6 @@ def split_into_pages(text):
     return [p.strip() for p in pages if p.strip()]
 
 # ------------------------------------------------------------
-# Snippet generation
-# ------------------------------------------------------------
-def make_snippet(text, length=240):
-    t = text.strip().replace("\n", " ")
-    if len(t) <= length:
-        return t
-    return t[:length].rsplit(" ", 1)[0] + "…"
-
-# ------------------------------------------------------------
 # Build a single index record
 # ------------------------------------------------------------
 def build_record(txt_path, pdf_map, audio_map, text_folder):
@@ -72,15 +63,11 @@ def build_record(txt_path, pdf_map, audio_map, text_folder):
     rel_audio = rel_txt.with_suffix(".mp3")
     rel_audio_str = str(rel_audio).replace("\\", "/")
 
-    # ------------------------------------------------------------
     # PDF lookup
-    # ------------------------------------------------------------
     pdf_key = f"work/pdf_ocr/{rel_pdf_str}"
     file_id = pdf_map.get(pdf_key)
 
-    # ------------------------------------------------------------
-    # AUDIO lookup
-    # ------------------------------------------------------------
+    # Audio lookup
     audio_key = f"work/audio/{rel_audio_str}"
     audio_id = audio_map.get(audio_key)
 
@@ -88,17 +75,20 @@ def build_record(txt_path, pdf_map, audio_map, text_folder):
     full_text = txt_path.read_text(encoding="utf-8", errors="ignore")
     pages = split_into_pages(full_text)
     tokens = tokenize(full_text)
-    snippet = make_snippet(full_text)
+
+    # IMPORTANT:
+    # Snippets are NOT generated here.
+    # They are generated in search.js based on the user's query.
 
     return {
         "id": record_id,
         "full_text": full_text,
         "pages": pages,
         "tokens": tokens,
-        "snippets": [snippet],
         "file_id": file_id,      # PDF Drive ID
         "audioId": audio_id,     # Audio Drive ID
-        "source": rel_pdf_str
+        "source": rel_pdf_str,
+        "snippets": []           # placeholder; UI will fill this dynamically
     }
 
 # ------------------------------------------------------------

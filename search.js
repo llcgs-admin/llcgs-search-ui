@@ -1,68 +1,84 @@
-// ============================================================
-// GLOBAL STATE
-// ============================================================
-let INDEX = [];
-let LAST_RESULTS = [];
-let SEARCH_HISTORY = [];
-
-// Expose INDEX for debugging
-window.INDEX = INDEX;
-
-// ============================================================
-// INITIALIZATION
-// ============================================================
-document.addEventListener("DOMContentLoaded", async () => {
-    await loadConfig();
-    await loadIndex();
-    loadSearchHistory();
-    setupEventHandlers();
-});
+// search.js
 
 let CONFIG = null;
+let INDEX = [];
+let SEARCH_HISTORY = [];
+let LAST_RESULTS = [];
+let currentQuery = "";
 
+// ============================================================
+// CONFIG + INDEX LOADING
+// ============================================================
 async function loadConfig() {
-    try {
-        const res = await fetch("config.json");
-        CONFIG = await res.json();
-        console.log("Config loaded:", CONFIG);
-    } catch (err) {
-        console.error("Failed to load config.json", err);
-    }
+    const res = await fetch("config.json");
+    if (!res.ok) throw new Error("Failed to load config.json");
+    CONFIG = await res.json();
+    console.log("Config loaded:", CONFIG);
 }
 
-// Load index.json using CONFIG
 async function loadIndex() {
-    try {
-        if (!CONFIG || !CONFIG.index_path) {
-            throw new Error("CONFIG.index_path missing");
-        }
-
-        const res = await fetch(CONFIG.index_path);
-        const data = await res.json();
-
-        INDEX = data.records || [];
-        window.INDEX = INDEX; // debugging
-
-        console.log(`Index loaded (${INDEX.length} records).`);
-    } catch (err) {
-        console.error("Failed to load index.json", err);
-    }
+    const indexPath = CONFIG.index_path || "dist/index.json";
+    const res = await fetch(indexPath);
+    if (!res.ok) throw new Error("Failed to load index.json");
+    const data = await res.json();
+    INDEX = Array.isArray(data) ? data : (data.records || []);
+    console.log(`Index loaded (${INDEX.length} records).`);
 }
+
 // ============================================================
-// SEARCH ENGINE (PURE LOGIC)
+// QUERY-AWARE SNIPPET EXTRACTION
 // ============================================================
-function runSearch(query, neighborhood = null) {
-    if (!query.trim()) return [];
+function extractSnippetsForQuery(rec, query) {
+    if (!rec.pages || !query.trim()) return [];
 
     const terms = query.toLowerCase().split(/\s+/).filter(Boolean);
+    const snippets = [];
+    const windowSize = 120;
 
-    return INDEX.filter(rec => {
-        // Neighborhood filter
-        if (neighborhood && !rec.source.includes(neighborhood)) return false;
+    rec.pages.forEach((page, pageIndex) => {
+        const lowerPage = page.toLowerCase();
 
-        // Boolean AND search across tokens
-        return terms.every(t => rec.tokens.includes(t));
+        terms.forEach(term => {
+            let pos = lowerPage.indexOf(term);
+
+            while (pos !== -1) {
+                const start = Math.max(0, pos - windowSize);
+                const end = Math.min(page.length, pos + term.length + windowSize);
+
+                const snippet = page
+                    .slice(start, end)
+                    .replace(/\s+/g, " ")
+                    .trim();
+
+                snippets.push(`Page ${pageIndex + 1}: ${snippet}…`);
+
+                pos = lowerPage.indexOf(term, pos + term.length);
+            }
+        });
     });
+
+    const seen = new Set();
+    return snippets.filter(sn => {
+        if (seen.has(sn)) return false;
+        seen.add(sn);
+        return true;
+    });
+}
+
+// ============================================================
+// SEARCH LOGIC
+// ============================================================
+function runSearch(query) {
+    const q = query.trim();
+    currentQuery = q;
+    if (!q) return [];
+
+    const qLower = q.toLowerCase();
+
+    return INDEX.filter(rec =>
+        rec.full_text &&
+        rec.full_text.toLowerCase().includes(qLower)
+    );
 }
 
 // ============================================================
@@ -70,101 +86,248 @@ function runSearch(query, neighborhood = null) {
 // ============================================================
 function renderResults(results) {
     const container = document.getElementById("results");
-    container.innerHTML = "";
+    if (!container) return;
 
     if (!results.length) {
         container.innerHTML = `<p class="no-results">No results found.</p>`;
         return;
     }
 
-    results.forEach(rec => {
-        const div = document.createElement("div");
-        div.className = "result";
+    let html = "";
 
+    results.forEach(rec => {
         const pdfBtn = rec.file_id
-            ? `<button class="open-pdf" data-id="${rec.file_id}">Open PDF</button>`
-            : `<button class="open-pdf disabled">No PDF</button>`;
+            ? `<button class="open-pdf" data-id="${rec.id}">Open PDF</button>`
+            : `<button class="open-pdf disabled" disabled>No PDF</button>`;
 
         const audioBtn = rec.audioId
-            ? `<button class="open-audio" data-id="${rec.audioId}">Play Audio</button>`
-            : `<button class="open-audio disabled">No Audio</button>`;
+            ? `<button class="open-audio" data-id="${rec.id}">Play Audio</button>`
+            : `<button class="open-audio disabled" disabled>No Audio</button>`;
 
-        div.innerHTML = `
-            <div class="result-header">
-                <span class="result-id">${rec.id}</span>
-            </div>
+        const snippets = extractSnippetsForQuery(rec, currentQuery);
+        const initial = snippets.slice(0, 3);
 
-            <div class="result-snippet">
-                ${rec.snippets[0] || ""}
-            </div>
+        let snippetHTML = initial
+            .map(sn => `<div class="snippet">${sn}</div>`)
+            .join("");
 
-            <div class="result-actions">
-                ${pdfBtn}
-                ${audioBtn}
-            </div>
+        const needsToggle = snippets.length > 3;
+
+        if (needsToggle) {
+            snippetHTML += `
+                <button class="snippet-toggle" data-id="${rec.id}" data-expanded="false">
+                    Show all snippets
+                </button>
+            `;
+        }
+
+        html += `
+            <article class="result" data-id="${rec.id}">
+                <header class="result-header">
+                    <span class="result-id">${rec.id}</span>
+                </header>
+
+                <div class="snippet-container">
+                    ${snippetHTML}
+                </div>
+
+                <div class="result-actions">
+                    ${pdfBtn}
+                    ${audioBtn}
+                </div>
+            </article>
         `;
-
-        container.appendChild(div);
     });
+
+    container.innerHTML = html;
+}
+
+// ============================================================
+// HISTORY
+// ============================================================
+function loadSearchHistory() {
+    try {
+        const stored = localStorage.getItem("searchHistory");
+        SEARCH_HISTORY = stored ? JSON.parse(stored) : [];
+    } catch {
+        SEARCH_HISTORY = [];
+    }
+
+    const dropdown = document.getElementById("historyDropdown");
+    if (!dropdown) return;
+
+    dropdown.innerHTML = `<option value="">Recent searches…</option>` +
+        SEARCH_HISTORY.map(q => `<option value="${q}">${q}</option>`).join("");
+}
+
+function saveSearchHistory(query) {
+    const q = query.trim();
+    if (!q) return;
+
+    SEARCH_HISTORY = [q, ...SEARCH_HISTORY.filter(x => x !== q)].slice(0, 20);
+
+    try {
+        localStorage.setItem("searchHistory", JSON.stringify(SEARCH_HISTORY));
+    } catch {
+        // ignore
+    }
+
+    loadSearchHistory();
+}
+
+// ============================================================
+// PDF / AUDIO OPEN HELPERS
+// ============================================================
+function findRecordById(id) {
+    return INDEX.find(r => r.id === id);
+}
+
+function openPdfForRecord(rec) {
+    if (!rec || !rec.file_id) return;
+
+    const multi = document.getElementById("multiPopupToggle")?.checked;
+    const usePreview = document.getElementById("usePreviewToggle")?.checked;
+
+    let url;
+    if (usePreview) {
+        url = `https://drive.google.com/file/d/${rec.file_id}/preview`;
+    } else {
+        url = `https://drive.google.com/uc?export=download&id=${rec.file_id}`;
+    }
+
+    const target = multi ? "_blank" : "pdfWindow";
+    window.open(url, target);
+}
+
+function openAudioForRecord(rec) {
+    if (!rec || !rec.audioId) return;
+
+    const multi = document.getElementById("multiPopupToggle")?.checked;
+    const url = `https://drive.google.com/file/d/${rec.audioId}/preview`;
+    const target = multi ? "_blank" : "audioWindow";
+    window.open(url, target);
 }
 
 // ============================================================
 // EVENT HANDLERS
 // ============================================================
 function setupEventHandlers() {
-    // Search form
-    document.getElementById("searchForm").addEventListener("submit", e => {
-        e.preventDefault();
-        const query = document.getElementById("query").value;
-        const neighborhood = document.getElementById("neighborhood").value || null;
+    const searchBtn = document.getElementById("searchBtn");
+    const queryInput = document.getElementById("query");
+    const historyDropdown = document.getElementById("historyDropdown");
+    const helpBtn = document.getElementById("helpBtn");
+    const helpModal = document.getElementById("helpModal");
+    const closeHelp = document.getElementById("closeHelp");
 
-        LAST_RESULTS = runSearch(query, neighborhood);
-        renderResults(LAST_RESULTS);
-
-        saveSearchHistory(query);
-    });
-
-    // PDF + Audio buttons (event delegation)
-    document.addEventListener("click", e => {
-        if (e.target.classList.contains("open-pdf")) {
-            const id = e.target.dataset.id;
-            if (id) window.open(`https://drive.google.com/file/d/${id}/preview`, "_blank");
-        }
-
-        if (e.target.classList.contains("open-audio")) {
-            const id = e.target.dataset.id;
-            if (id) window.open(`https://drive.google.com/file/d/${id}/preview`, "_blank");
-        }
-    });
-}
-
-// ============================================================
-// SEARCH HISTORY
-// ============================================================
-function saveSearchHistory(query) {
-    if (!query.trim()) return;
-
-    SEARCH_HISTORY.unshift(query);
-    SEARCH_HISTORY = SEARCH_HISTORY.slice(0, 20);
-
-    localStorage.setItem("searchHistory", JSON.stringify(SEARCH_HISTORY));
-    loadSearchHistory();
-}
-
-function loadSearchHistory() {
-    const stored = localStorage.getItem("searchHistory");
-    SEARCH_HISTORY = stored ? JSON.parse(stored) : [];
-
-    const list = document.getElementById("history");
-    if (!list) return;
-
-    list.innerHTML = SEARCH_HISTORY
-        .map(q => `<li class="history-item">${q}</li>`)
-        .join("");
-
-    list.querySelectorAll(".history-item").forEach(item => {
-        item.addEventListener("click", () => {
-            document.getElementById("query").value = item.textContent;
+    if (searchBtn) {
+        searchBtn.addEventListener("click", e => {
+            e.preventDefault();
+            const query = queryInput ? queryInput.value : "";
+            LAST_RESULTS = runSearch(query);
+            renderResults(LAST_RESULTS);
+            saveSearchHistory(query);
         });
+    }
+
+    if (queryInput) {
+        queryInput.addEventListener("keydown", e => {
+            if (e.key === "Enter") {
+                e.preventDefault();
+                searchBtn?.click();
+            }
+        });
+    }
+
+    if (historyDropdown) {
+        historyDropdown.addEventListener("change", () => {
+            const val = historyDropdown.value;
+            if (val && queryInput) {
+                queryInput.value = val;
+            }
+        });
+    }
+
+    // Global click delegation
+    document.addEventListener("click", e => {
+        const target = e.target;
+
+        if (target.classList.contains("open-pdf")) {
+            const id = target.dataset.id;
+            const rec = findRecordById(id);
+            openPdfForRecord(rec);
+        }
+
+        if (target.classList.contains("open-audio")) {
+            const id = target.dataset.id;
+            const rec = findRecordById(id);
+            openAudioForRecord(rec);
+        }
+
+        if (target.classList.contains("snippet-toggle")) {
+            const id = target.dataset.id;
+            const expanded = target.dataset.expanded === "true";
+            const rec = findRecordById(id);
+            if (!rec) return;
+
+            const container = target.closest(".snippet-container");
+            if (!container) return;
+
+            const snippets = extractSnippetsForQuery(rec, currentQuery);
+            const list = expanded ? snippets.slice(0, 3) : snippets;
+
+            let snippetHTML = list
+                .map(sn => `<div class="snippet">${sn}</div>`)
+                .join("");
+
+            snippetHTML += `
+                <button class="snippet-toggle" data-id="${id}" data-expanded="${!expanded}">
+                    ${expanded ? "Show all snippets" : "Show fewer snippets"}
+                </button>
+            `;
+
+            container.innerHTML = snippetHTML;
+        }
     });
+
+    // Help modal
+    if (helpBtn && helpModal) {
+        helpBtn.addEventListener("click", () => {
+            helpModal.style.display = "block";
+        });
+    }
+
+    if (closeHelp && helpModal) {
+        closeHelp.addEventListener("click", () => {
+            helpModal.style.display = "none";
+        });
+    }
+
+    if (helpModal) {
+        window.addEventListener("click", e => {
+            if (e.target === helpModal) {
+                helpModal.style.display = "none";
+            }
+        });
+    }
 }
+
+// ============================================================
+// INIT
+// ============================================================
+document.addEventListener("DOMContentLoaded", async () => {
+    try {
+        await loadConfig();
+        await loadIndex();
+        loadSearchHistory();
+        setupEventHandlers();
+
+        const queryInput = document.getElementById("query");
+        if (queryInput) queryInput.focus();
+    } catch (err) {
+        console.error(err);
+        const container = document.getElementById("results");
+        if (container) {
+            container.innerHTML = `<p class="error">Failed to initialize search. See console for details.</p>`;
+        }
+    }
+});
