@@ -209,6 +209,26 @@ mark {
   color: #000;
 }
 
+.audio-container {
+    margin-top: 0.75rem;
+    padding: 0.75rem 1rem;
+    background: #f7f7f5; /* soft archival neutral */
+    border: 1px solid #dcd9d2; /* subtle archival border */
+    border-radius: 6px;
+    box-shadow: 0 1px 3px rgba(0,0,0,0.08);
+	align-items: center;
+	align-content: center;
+    transition: all 0.25s ease;
+}
+
+.audio-container iframe {
+    width: 40%;
+    height: 80px; /* Drive player height */
+    border: none;
+    border-radius: 4px;
+
+    overflow: hidden;
+}
 /* ---------------------------------------------------------
    BUTTONS
 --------------------------------------------------------- */
