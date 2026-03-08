@@ -135,9 +135,15 @@ function renderResults(results) {
                     ${pdfBtn}
                     ${audioBtn}
                 </div>
-				
-				<!-- REQUIRED FOR INLINE AUDIO -->
-				<div class="audio-container" style="display:none;"></div>
+
+                <!-- INLINE AUDIO PLAYER WITH TITLE BAR -->
+                <div class="audio-container" id="audio-${rec.id}" style="display:none;">
+                    <div class="audio-header">Audio Player</div>
+                    <iframe
+                        src=""
+                        allow="autoplay"
+                    ></iframe>
+                </div>
 
             </article>
         `;
@@ -145,7 +151,6 @@ function renderResults(results) {
 
     container.innerHTML = html;
 }
-
 // ============================================================
 // HISTORY
 // ============================================================
