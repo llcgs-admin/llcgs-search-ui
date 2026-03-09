@@ -1,7 +1,8 @@
-import { loadConfig, loadIndex } from "./config.js";
+import { loadConfig, loadIndex, INDEX } from "./config.js";
 import { extractSnippetsForQuery } from "./snippets.js";
 import { loadSearchHistory, saveSearchHistory } from "./history.js";
 import { setupEventHandlers } from "./events.js";
+
 
 let LAST_RESULTS = [];
 let currentQuery = "";
