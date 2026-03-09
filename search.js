@@ -329,7 +329,8 @@ if (target.classList.contains("snippet-toggle")) {
     `;
 
     container.innerHTML = snippetHTML;
-}
+	}
+});
 
 // Help modal
 if (helpBtn && helpModal) {
