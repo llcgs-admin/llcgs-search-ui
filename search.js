@@ -137,7 +137,7 @@ function renderResults(results) {
                 </div>
 
                 <!-- INLINE AUDIO PLAYER WITH TITLE BAR -->
-                <div class="audio-container" id="audio-${rec.id}" style="display:none;">
+                <div class="audio-container" id="audio-${rec.id}">
                     <div class="audio-header">Audio Player</div>
                     <iframe
                         src=""
@@ -277,39 +277,31 @@ function setupEventHandlers() {
             openPdfForRecord(rec);
         }
 
-		if (target.classList.contains("open-audio")) {
-			const id = target.dataset.id;
-			const rec = findRecordById(id);
-			if (!rec || !rec.audioId) return;
+if (target.classList.contains("open-audio")) {
+    const id = target.dataset.id;
+    const rec = findRecordById(id);
+    if (!rec || !rec.audioId) return;
 
-			const resultEl = target.closest(".result");
-			const container = resultEl.querySelector(".audio-container");
-			const isOpen = container.style.display === "block";
+    const resultEl = target.closest(".result");
+    const container = resultEl.querySelector(".audio-container");
+    const iframe = container.querySelector("iframe");
+    const isOpen = container.classList.contains("open");
 
-			if (isOpen) {
-				// CLOSE AUDIO
-				container.style.display = "none";
-				container.innerHTML = "";
-				target.textContent = "Play Audio";
-				return;
-			}
+	if (isOpen) {
+		// CLOSE AUDIO (animated)
+		container.classList.remove("open");
+		iframe.src = ""; // stop playback
+		target.textContent = "Play Audio";
+		return;
+	}
 
-			// OPEN AUDIO
-			const previewUrl = `https://drive.google.com/file/d/${rec.audioId}/preview`;
+	// OPEN AUDIO (animated)
+	const previewUrl = `https://drive.google.com/file/d/${rec.audioId}/preview`;
 
-			container.innerHTML = `
-				<iframe
-					src="${previewUrl}"
-					width="100%"
-					height="80"
-					allow="autoplay"
-					style="border:0; margin-top:8px;">
-				</iframe>
-			`;
-
-			container.style.display = "block";
-			target.textContent = "Close Audio";
-		}
+	iframe.src = previewUrl; // only update the iframe
+	container.classList.add("open");
+	target.textContent = "Close Audio";
+	}
         if (target.classList.contains("snippet-toggle")) {
             const id = target.dataset.id;
             const expanded = target.dataset.expanded === "true";

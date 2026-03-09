@@ -218,15 +218,23 @@ mark {
 }
 
 .audio-container {
+    width: 320px;              /* or whatever width you chose */
     margin-top: 0.75rem;
     padding: 0.75rem 1rem;
-    background: #f7f7f5; /* soft archival neutral */
-    border: 1px solid #dcd9d2; /* subtle archival border */
+    background: #f7f7f5;
+    border: 1px solid #dcd9d2;
     border-radius: 6px;
     box-shadow: 0 1px 3px rgba(0,0,0,0.08);
-	align-items: center;
-	align-content: center;
-    transition: all 0.25s ease;
+
+    max-height: 0;
+    opacity: 0;
+    overflow: hidden;
+    transition: max-height 0.35s ease, opacity 0.25s ease;
+}
+
+.audio-container.open {
+    max-height: 200px;         /* enough for header + iframe */
+    opacity: 1;
 }
 
 .audio-container iframe {
