@@ -101,7 +101,10 @@ function renderResults(results) {
             : `<button class="open-pdf disabled" disabled>No PDF</button>`;
 
         const audioBtn = rec.audioId
-            ? `<button class="open-audio" data-id="${rec.id}">Play Audio</button>`
+            ? `<button class="open-audio" data-id="${rec.id}">
+					<span class="chevron">▶</span>
+					<span class="audio-label">Play Audio</span>
+				</button>`
             : `<button class="open-audio disabled" disabled>No Audio</button>`;
 
         const snippets = extractSnippetsForQuery(rec, currentQuery);
@@ -287,67 +290,66 @@ if (target.classList.contains("open-audio")) {
     const iframe = container.querySelector("iframe");
     const isOpen = container.classList.contains("open");
 
-	if (isOpen) {
-		// CLOSE AUDIO (animated)
-		container.classList.remove("open");
-		iframe.src = ""; // stop playback
-		target.textContent = "Play Audio";
-		return;
-	}
+    if (isOpen) {
+        container.classList.remove("open");
+        iframe.src = "";
+        target.querySelector(".audio-label").textContent = "Play Audio";
+        target.classList.remove("open");
+        return;
+    }
 
-	// OPEN AUDIO (animated)
-	const previewUrl = `https://drive.google.com/file/d/${rec.audioId}/preview`;
+    const previewUrl = `https://drive.google.com/file/d/${rec.audioId}/preview`;
 
-	iframe.src = previewUrl; // only update the iframe
-	container.classList.add("open");
-	target.textContent = "Close Audio";
-	}
-        if (target.classList.contains("snippet-toggle")) {
-            const id = target.dataset.id;
-            const expanded = target.dataset.expanded === "true";
-            const rec = findRecordById(id);
-            if (!rec) return;
+    iframe.src = previewUrl;
+    container.classList.add("open");
+    target.querySelector(".audio-label").textContent = "Close Audio";
+    target.classList.add("open");
+}
 
-            const container = target.closest(".snippet-container");
-            if (!container) return;
+if (target.classList.contains("snippet-toggle")) {
+    const id = target.dataset.id;
+    const expanded = target.dataset.expanded === "true";
+    const rec = findRecordById(id);
+    if (!rec) return;
 
-            const snippets = extractSnippetsForQuery(rec, currentQuery);
-            const list = expanded ? snippets.slice(0, 3) : snippets;
+    const container = target.closest(".snippet-container");
+    if (!container) return;
 
-            let snippetHTML = list
-                .map(sn => `<div class="snippet">${sn}</div>`)
-                .join("");
+    const snippets = extractSnippetsForQuery(rec, currentQuery);
+    const list = expanded ? snippets.slice(0, 3) : snippets;
 
-            snippetHTML += `
-                <button class="snippet-toggle" data-id="${id}" data-expanded="${!expanded}">
-                    ${expanded ? "Show all snippets" : "Show fewer snippets"}
-                </button>
-            `;
+    let snippetHTML = list
+        .map(sn => `<div class="snippet">${sn}</div>`)
+        .join("");
 
-            container.innerHTML = snippetHTML;
+    snippetHTML += `
+        <button class="snippet-toggle" data-id="${id}" data-expanded="${!expanded}">
+            ${expanded ? "Show all snippets" : "Show fewer snippets"}
+        </button>
+    `;
+
+    container.innerHTML = snippetHTML;
+}
+
+// Help modal
+if (helpBtn && helpModal) {
+    helpBtn.addEventListener("click", () => {
+        helpModal.style.display = "block";
+    });
+}
+
+if (closeHelp && helpModal) {
+    closeHelp.addEventListener("click", () => {
+        helpModal.style.display = "none";
+    });
+}
+
+if (helpModal) {
+    window.addEventListener("click", e => {
+        if (e.target === helpModal) {
+            helpModal.style.display = "none";
         }
     });
-
-    // Help modal
-    if (helpBtn && helpModal) {
-        helpBtn.addEventListener("click", () => {
-            helpModal.style.display = "block";
-        });
-    }
-
-    if (closeHelp && helpModal) {
-        closeHelp.addEventListener("click", () => {
-            helpModal.style.display = "none";
-        });
-    }
-
-    if (helpModal) {
-        window.addEventListener("click", e => {
-            if (e.target === helpModal) {
-                helpModal.style.display = "none";
-            }
-        });
-    }
 }
 
 // ============================================================
