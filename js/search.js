@@ -2,6 +2,7 @@ import { loadConfig, loadIndex, INDEX } from "./config.js";
 import { extractSnippetsForQuery } from "./snippets.js";
 import { loadSearchHistory, saveSearchHistory } from "./history.js";
 import { setupEventHandlers } from "./events.js";
+import { populateNeighborhoodDropdown, boxesForNeighborhood } from "./neighborhoods.js";
 
 
 let LAST_RESULTS = [];
@@ -13,12 +14,23 @@ export function runSearch(query, INDEX) {
     if (!q) return [];
 
     const qLower = q.toLowerCase();
-    return INDEX.filter(rec =>
+
+    let results = INDEX.filter(rec =>
         rec.full_text &&
         rec.full_text.toLowerCase().includes(qLower)
     );
-}
 
+    // Neighborhood filtering
+    const neighborhoodSelect = document.getElementById("neighborhoodFilter");
+    const selectedNeighborhood = neighborhoodSelect?.value || "";
+
+    if (selectedNeighborhood) {
+        const allowedBoxes = boxesForNeighborhood(selectedNeighborhood);
+        results = results.filter(rec => allowedBoxes.includes(Number(rec.box)));
+    }
+
+    return results;
+}
 export function renderResults(results) {
     const container = document.getElementById("results");
     if (!container) return;
@@ -80,6 +92,7 @@ export function renderResults(results) {
 document.addEventListener("DOMContentLoaded", async () => {
     await loadConfig();
     await loadIndex();
+	populateNeighborhoodDropdown();
     loadSearchHistory();
 
     setupEventHandlers({ value: currentQuery });

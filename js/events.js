@@ -27,7 +27,15 @@ export function setupEventHandlers(currentQueryRef) {
         });
     }
 
+	const neighborhoodSelect = document.getElementById("neighborhoodFilter");
 
+	if (neighborhoodSelect) {
+		neighborhoodSelect.addEventListener("change", () => {
+			const queryInput = document.getElementById("query");
+			LAST_RESULTS = runSearch(queryInput.value, INDEX);
+			renderResults(LAST_RESULTS);
+		});
+	}
 
 	document.addEventListener("click", e => {
         const target = e.target.closest(".open-audio, .open-pdf, .snippet-toggle");
