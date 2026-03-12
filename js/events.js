@@ -3,6 +3,9 @@ import { toggleAudio } from "./audio.js";
 import { toggleSnippets } from "./snippets.js";
 import { openPdfForRecord } from "./pdf.js";
 
+import { runSearch, renderResults } from "./search.js";
+import { INDEX } from "./config.js";
+
 export function setupEventHandlers(currentQueryRef) {
     const searchBtn = document.getElementById("searchBtn");
     const queryInput = document.getElementById("query");
@@ -32,8 +35,8 @@ export function setupEventHandlers(currentQueryRef) {
 	if (neighborhoodSelect) {
 		neighborhoodSelect.addEventListener("change", () => {
 			const queryInput = document.getElementById("query");
-			LAST_RESULTS = runSearch(queryInput.value, INDEX);
-			renderResults(LAST_RESULTS);
+			const results = runSearch(queryInput.value, INDEX);
+			renderResults(results);
 		});
 	}
 

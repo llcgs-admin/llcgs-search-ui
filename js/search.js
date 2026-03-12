@@ -8,6 +8,7 @@ import { populateNeighborhoodDropdown, boxesForNeighborhood } from "./neighborho
 let LAST_RESULTS = [];
 let currentQuery = "";
 
+
 export function runSearch(query, INDEX) {
     const q = query.trim();
     currentQuery = q;
@@ -26,14 +27,24 @@ export function runSearch(query, INDEX) {
 
     if (selectedNeighborhood) {
         const allowedBoxes = boxesForNeighborhood(selectedNeighborhood);
-        results = results.filter(rec => allowedBoxes.includes(Number(rec.box)));
+
+        results = results.filter(rec => {
+            if (!rec.box) return false;
+
+            // Normalize rec.box to a number
+            const boxNum = Number(String(rec.box).replace(/\D+/g, ""));
+            return allowedBoxes.includes(boxNum);
+        });
     }
 
     return results;
 }
+
 export function renderResults(results) {
     const container = document.getElementById("results");
     if (!container) return;
+	
+	console.log("DEBUG RESULTS:", results);
 
     if (!results.length) {
         container.innerHTML = `<p class="no-results">No results found.</p>`;
