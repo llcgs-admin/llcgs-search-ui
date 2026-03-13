@@ -35,8 +35,8 @@ export function setupEventHandlers(currentQueryRef) {
 	if (neighborhoodSelect) {
 		neighborhoodSelect.addEventListener("change", () => {
 			const queryInput = document.getElementById("query");
-			const results = runSearch(queryInput.value, INDEX);
-			renderResults(results);
+			const { results, elapsed } = runSearch(queryInput.value, INDEX);
+			renderResults(results, elapsed);
 		});
 	}
 

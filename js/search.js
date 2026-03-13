@@ -12,7 +12,9 @@ let currentQuery = "";
 export function runSearch(query, INDEX) {
     const q = query.trim();
     currentQuery = q;
-    if (!q) return [];
+    if (!q) return { results: [], elapsed: 0 };
+
+    const start = performance.now();
 
     const qLower = q.toLowerCase();
 
@@ -30,21 +32,29 @@ export function runSearch(query, INDEX) {
 
         results = results.filter(rec => {
             if (!rec.box) return false;
-
-            // Normalize rec.box to a number
             const boxNum = Number(String(rec.box).replace(/\D+/g, ""));
             return allowedBoxes.includes(boxNum);
         });
     }
 
-    return results;
+    const elapsed = performance.now() - start;
+
+    return { results, elapsed };
 }
 
-export function renderResults(results) {
+export function renderResults(results, elapsed = 0) {
     const container = document.getElementById("results");
     if (!container) return;
-	
-	console.log("DEBUG RESULTS:", results);
+
+    // Update result count + elapsed time
+    const info = document.getElementById("resultInfo");
+    if (info) {
+        const count = results.length;
+        const ms = Math.round(elapsed);
+        info.textContent = `${count} result${count !== 1 ? "s" : ""} in ${ms} ms`;
+    }
+
+    console.log("DEBUG RESULTS:", results);
 
     if (!results.length) {
         container.innerHTML = `<p class="no-results">No results found.</p>`;
@@ -112,9 +122,9 @@ document.addEventListener("DOMContentLoaded", async () => {
     const queryInput = document.getElementById("query");
 
     searchBtn.addEventListener("click", () => {
-        LAST_RESULTS = runSearch(queryInput.value, INDEX);
-        renderResults(LAST_RESULTS);
-        saveSearchHistory(queryInput.value);
+		const { results, elapsed } = runSearch(queryInput.value, INDEX);
+		renderResults(results, elapsed);
+		saveSearchHistory(queryInput.value);
     });
 
     queryInput.focus();

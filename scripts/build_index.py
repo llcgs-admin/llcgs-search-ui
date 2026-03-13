@@ -76,19 +76,22 @@ def build_record(txt_path, pdf_map, audio_map, text_folder):
     pages = split_into_pages(full_text)
     tokens = tokenize(full_text)
 
-    # IMPORTANT:
-    # Snippets are NOT generated here.
-    # They are generated in search.js based on the user's query.
+    # --------------------------------------------------------
+    # Extract box number from ID (e.g., RG4831AUb007f009 → 7)
+    # --------------------------------------------------------
+    box_match = re.search(r"b(\d{3})", record_id, re.IGNORECASE)
+    box_num = int(box_match.group(1)) if box_match else None
 
     return {
         "id": record_id,
+        "box": box_num,          # <-- REQUIRED FOR NEIGHBORHOOD FILTERING
         "full_text": full_text,
         "pages": pages,
         "tokens": tokens,
         "file_id": file_id,      # PDF Drive ID
         "audioId": audio_id,     # Audio Drive ID
         "source": rel_pdf_str,
-        "snippets": []           # placeholder; UI will fill this dynamically
+        "snippets": []           # placeholder; UI fills dynamically
     }
 
 # ------------------------------------------------------------

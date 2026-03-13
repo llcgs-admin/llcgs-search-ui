@@ -8,9 +8,7 @@ export async function loadConfig() {
 }
 
 export async function loadIndex() {
-    const indexPath = CONFIG.index_path || "dist/index.json";
-    const res = await fetch(indexPath);
-    if (!res.ok) throw new Error("Failed to load index.json");
+    const res = await fetch("dist/index.json");
     const data = await res.json();
-    INDEX = Array.isArray(data) ? data : (data.records || []);
+    INDEX = data.records;   // <-- KEEP RECORDS AS-IS
 }
