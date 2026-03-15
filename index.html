@@ -39,6 +39,7 @@
         <select id="historyDropdown" class="history-dropdown">
           <option value="">Recent searches…</option>
         </select>
+		<button id="clearHistoryBtn">Clear Search History</button>
       </div>
       <div class="options-row">
 
@@ -75,11 +76,12 @@
         <button id="helpBtn" class="help-button">Help</button>
 
       </div>
-
+	  <div id="resultInfo" class="result-info"></div>
     </section>
 
     <!-- RESULTS -->
     <section id="results" class="results-container"></section>
+	<div class="audio-container" style="display:none;"></div>
 
   </main>
 
@@ -88,7 +90,7 @@
   </footer>
 
   <!-- Scripts -->
-  <script type="module" src="search.js"></script>
+  <script type="module" src="js/search.js"></script>
 <div id="helpModal" class="modal">
   <div class="modal-content">
     <span id="closeHelp" class="close">&times;</span>

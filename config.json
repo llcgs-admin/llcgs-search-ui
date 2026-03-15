@@ -1,0 +1,12 @@
+{
+  "pdf_folder": "D:/source_pdfs",
+  "text_folder": "D:/source_text",
+
+  "index_output": "D:/llcgs-loh/work/index/index.json",
+  "dist_index_output": "D:/llcgs-loh/dist/index.json",
+
+  "pdf_map": "D:/llcgs-loh/work/pdf_map/pdf_map.json",
+  "audio_map": "D:/llcgs-loh/work/audio_map/audio_map.json",
+
+  "index_path": "dist/index.json"
+}

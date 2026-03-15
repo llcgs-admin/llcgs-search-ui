@@ -1,0 +1,61 @@
+import { findRecordById } from "./utils.js";
+import { toggleAudio } from "./audio.js";
+import { toggleSnippets } from "./snippets.js";
+import { openPdfForRecord } from "./pdf.js";
+
+import { runSearch, renderResults } from "./search.js";
+import { INDEX } from "./config.js";
+
+export function setupEventHandlers(currentQueryRef) {
+    const searchBtn = document.getElementById("searchBtn");
+    const queryInput = document.getElementById("query");
+
+    if (queryInput) {
+        queryInput.addEventListener("keydown", e => {
+            if (e.key === "Enter") {
+                e.preventDefault();
+                searchBtn?.click();
+            }
+        });
+    }
+	
+    const historyDropdown = document.getElementById("historyDropdown");
+
+    if (historyDropdown) {
+        historyDropdown.addEventListener("change", () => {
+            const val = historyDropdown.value;
+            if (val && queryInput) {
+                queryInput.value = val;
+            }
+        });
+    }
+
+	const neighborhoodSelect = document.getElementById("neighborhoodFilter");
+
+	if (neighborhoodSelect) {
+		neighborhoodSelect.addEventListener("change", () => {
+			const queryInput = document.getElementById("query");
+			const { results, elapsed } = runSearch(queryInput.value, INDEX);
+			renderResults(results, elapsed);
+		});
+	}
+
+	document.addEventListener("click", e => {
+        const target = e.target.closest(".open-audio, .open-pdf, .snippet-toggle");
+		
+		if (!target) return;
+
+        if (target.classList.contains("open-pdf")) {
+            const rec = findRecordById(target.dataset.id);
+            openPdfForRecord(rec);
+        }
+
+        if (target.classList.contains("open-audio")) {
+            toggleAudio(target, findRecordById);
+        }
+
+        if (target.classList.contains("snippet-toggle")) {
+            toggleSnippets(target, currentQueryRef.value, findRecordById);
+        }
+    });
+}
