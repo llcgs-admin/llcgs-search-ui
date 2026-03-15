@@ -9,13 +9,79 @@ import { boxesForNeighborhood, NEIGHBORHOOD_MAP } from "./neighborhoods.js";
 export let INDEX = [];
 let currentQuery = "";
 
+let SEARCH_HISTORY = [];
+const MAX_HISTORY = 20;
+
 // ------------------------------------------------------------
 // Load index.json
 // ------------------------------------------------------------
 export async function loadIndex() {
     const res = await fetch("dist/index.json");
     const data = await res.json();
-    INDEX = data.records; // preserve all fields including box
+    INDEX = data.records;
+}
+
+// ------------------------------------------------------------
+// Load history from localStorage
+// ------------------------------------------------------------
+function loadHistoryFromStorage() {
+    try {
+        const stored = JSON.parse(localStorage.getItem("searchHistory"));
+        if (Array.isArray(stored)) SEARCH_HISTORY = stored;
+    } catch (e) {
+        SEARCH_HISTORY = [];
+    }
+}
+
+// ------------------------------------------------------------
+// Save history to localStorage
+// ------------------------------------------------------------
+function saveHistoryToStorage() {
+    localStorage.setItem("searchHistory", JSON.stringify(SEARCH_HISTORY));
+}
+
+// ------------------------------------------------------------
+// Add query to history
+// ------------------------------------------------------------
+function addToSearchHistory(query) {
+    const q = query.trim();
+    if (!q) return;
+
+    SEARCH_HISTORY = SEARCH_HISTORY.filter(item => item !== q);
+    SEARCH_HISTORY.unshift(q);
+
+    if (SEARCH_HISTORY.length > MAX_HISTORY) {
+        SEARCH_HISTORY = SEARCH_HISTORY.slice(0, MAX_HISTORY);
+    }
+
+    saveHistoryToStorage();
+    populateHistoryDropdown();
+}
+
+// ------------------------------------------------------------
+// Clear history
+// ------------------------------------------------------------
+function clearSearchHistory() {
+    SEARCH_HISTORY = [];
+    saveHistoryToStorage();
+    populateHistoryDropdown();
+}
+
+// ------------------------------------------------------------
+// Populate history dropdown
+// ------------------------------------------------------------
+function populateHistoryDropdown() {
+    const dropdown = document.getElementById("historyDropdown");
+    if (!dropdown) return;
+
+    dropdown.innerHTML = `<option value="">Recent searches…</option>`;
+
+    SEARCH_HISTORY.forEach(q => {
+        const opt = document.createElement("option");
+        opt.value = q;
+        opt.textContent = q;
+        dropdown.appendChild(opt);
+    });
 }
 
 // ------------------------------------------------------------
@@ -37,23 +103,153 @@ function populateNeighborhoodDropdown() {
 }
 
 // ------------------------------------------------------------
+// Boolean Query Parser (whole‑word matching)
+// ------------------------------------------------------------
+function parseQuery(q) {
+    const phrases = [];
+    const orGroups = [];
+    const excluded = [];
+    const required = [];
+
+    let working = q.toLowerCase();
+
+    const phraseRegex = /"([^"]+)"/g;
+    working = working.replace(phraseRegex, (_, p) => {
+        const phrase = p.trim();
+        if (phrase) phrases.push(phrase);
+        return " ";
+    });
+
+    const orRegex = /\(([^)]+)\)/g;
+    working = working.replace(orRegex, (_, group) => {
+        const terms = group
+            .split(/\s+or\s+/i)
+            .map(t => t.trim())
+            .filter(Boolean);
+        if (terms.length > 0) orGroups.push(terms);
+        return " ";
+    });
+
+    const notRegex = /-(\w+)/g;
+    working = working.replace(notRegex, (_, term) => {
+        const t = term.trim();
+        if (t) excluded.push(t);
+        return " ";
+    });
+
+    const reqTerms = working.match(/\b[\p{L}\p{N}']+\b/gu) || [];
+    reqTerms.forEach(t => {
+        const term = t.trim();
+        if (term) required.push(term);
+    });
+
+    return { phrases, orGroups, excluded, required };
+}
+
+// ------------------------------------------------------------
+// Record Matcher (whole‑word logic)
+// ------------------------------------------------------------
+function matchesRecord(rec, parsed) {
+    const text = rec.full_text?.toLowerCase() || "";
+    if (!text) return false;
+
+    const words = text.match(/\b[\p{L}\p{N}']+\b/gu) || [];
+    const wordSet = new Set(words);
+
+    for (const term of parsed.required) {
+        if (!wordSet.has(term)) return false;
+    }
+
+    for (const phrase of parsed.phrases) {
+        if (!text.includes(phrase)) return false;
+    }
+
+    for (const group of parsed.orGroups) {
+        const ok = group.some(term => wordSet.has(term));
+        if (!ok) return false;
+    }
+
+    for (const term of parsed.excluded) {
+        if (wordSet.has(term)) return false;
+    }
+
+    return true;
+}
+
+// ------------------------------------------------------------
+// Query‑aware snippet extraction
+// ------------------------------------------------------------
+function extractQueryAwareSnippets(fullText, parsed, maxSnippets = 3) {
+    if (!fullText) return [];
+
+    const text = fullText.toLowerCase();
+    const snippets = [];
+    const windowSize = 120;
+
+    const tokens = new Set();
+    parsed.required.forEach(t => tokens.add(t));
+    parsed.phrases.forEach(p => tokens.add(p));
+    parsed.orGroups.forEach(group => group.forEach(t => tokens.add(t)));
+
+    const positions = [];
+
+    for (const token of tokens) {
+        if (!token) continue;
+
+        if (token.includes(" ")) {
+            let idx = text.indexOf(token);
+            while (idx !== -1) {
+                positions.push(idx);
+                idx = text.indexOf(token, idx + 1);
+            }
+        } else {
+            const regex = new RegExp(`\\b${token}\\b`, "gi");
+            let match;
+            while ((match = regex.exec(fullText)) !== null) {
+                positions.push(match.index);
+            }
+        }
+    }
+
+    if (positions.length === 0) {
+        const chunkSize = 200;
+        for (let i = 0; i < fullText.length && snippets.length < maxSnippets; i += chunkSize) {
+            snippets.push(fullText.slice(i, i + chunkSize));
+        }
+        return snippets;
+    }
+
+    positions.sort((a, b) => a - b);
+
+    for (const pos of positions) {
+        if (snippets.length >= maxSnippets) break;
+
+        const start = Math.max(0, pos - windowSize);
+        const end = Math.min(fullText.length, pos + windowSize);
+
+        let snippet = fullText.slice(start, end).trim();
+        if (start > 0) snippet = "…" + snippet;
+        if (end < fullText.length) snippet = snippet + "…";
+
+        snippets.push(snippet);
+    }
+
+    return snippets;
+}
+
+// ------------------------------------------------------------
 // Run search
 // ------------------------------------------------------------
 export function runSearch(query, INDEX) {
     const q = query.trim();
     currentQuery = q;
-    if (!q) return { results: [], elapsed: 0 };
+    if (!q) return { results: [], elapsed: 0, parsed: parseQuery("") };
 
+    const parsed = parseQuery(q);
     const start = performance.now();
-    const qLower = q.toLowerCase();
 
-    // Basic text match
-    let results = INDEX.filter(rec =>
-        rec.full_text &&
-        rec.full_text.toLowerCase().includes(qLower)
-    );
+    let results = INDEX.filter(rec => matchesRecord(rec, parsed));
 
-    // Neighborhood filtering
     const neighborhoodSelect = document.getElementById("neighborhoodFilter");
     const selectedNeighborhood = neighborhoodSelect?.value || "";
 
@@ -62,24 +258,63 @@ export function runSearch(query, INDEX) {
 
         results = results.filter(rec => {
             if (!rec.box) return false;
-
             const boxNum = Number(String(rec.box).replace(/\D+/g, ""));
             return allowedBoxes.includes(boxNum);
         });
     }
 
     const elapsed = performance.now() - start;
-    return { results, elapsed };
+    return { results, elapsed, parsed };
+}
+
+// ------------------------------------------------------------
+// Highlight matched terms inside snippets
+// ------------------------------------------------------------
+function highlightMatches(snippet, parsed) {
+    if (!snippet) return snippet;
+
+    // Build a unified list of tokens to highlight
+    const tokens = new Set();
+
+    parsed.required.forEach(t => tokens.add(t));
+    parsed.phrases.forEach(p => tokens.add(p));
+    parsed.orGroups.forEach(group => group.forEach(t => tokens.add(t)));
+
+    // Excluded terms are NOT highlighted
+
+    // Sort longest-first so phrases win over single words
+    const sorted = [...tokens].sort((a, b) => b.length - a.length);
+
+    let highlighted = snippet;
+
+    for (const token of sorted) {
+        if (!token) continue;
+
+        // Escape regex characters
+        const escaped = token.replace(/[.*+?^${}()|[\]\\]/g, "\\$&");
+
+        let regex;
+        if (token.includes(" ")) {
+            // Phrase match (simple substring)
+            regex = new RegExp(escaped, "gi");
+        } else {
+            // Whole-word match
+            regex = new RegExp(`\\b${escaped}\\b`, "gi");
+        }
+
+        highlighted = highlighted.replace(regex, match => `<mark>${match}</mark>`);
+    }
+
+    return highlighted;
 }
 
 // ------------------------------------------------------------
 // Render results
 // ------------------------------------------------------------
-export function renderResults(results, elapsed = 0) {
+export function renderResults(results, elapsed = 0, parsedQuery = null) {
     const container = document.getElementById("results");
     if (!container) return;
 
-    // Update result count + elapsed time
     const info = document.getElementById("resultInfo");
     if (info) {
         const count = results.length;
@@ -93,15 +328,10 @@ export function renderResults(results, elapsed = 0) {
         const resultDiv = document.createElement("div");
         resultDiv.className = "result";
 
-        // Title
         const title = document.createElement("div");
         title.className = "result-title";
         title.textContent = rec.id;
         resultDiv.appendChild(title);
-
-        // --------------------------------------------------------
-        // PDF + AUDIO BUTTONS
-        // --------------------------------------------------------
 
         // PDF button
         if (rec.file_id) {
@@ -113,14 +343,21 @@ export function renderResults(results, elapsed = 0) {
                 const usePreview = document.getElementById("usePreviewToggle")?.checked;
                 const allowMulti = document.getElementById("multiPopupToggle")?.checked;
 
-                const base = `https://drive.google.com/file/d/${rec.file_id}`;
-                const url = usePreview ? `${base}/preview` : `${base}/view`;
+				const base = `https://drive.google.com/file/d/${rec.file_id}`;
+				const url = usePreview ? `${base}/preview` : `${base}/view`;
 
-                if (allowMulti) {
-                    window.open(url, "_blank");
-                } else {
-                    window.open(url, "pdfWindow");
-                }
+				if (allowMulti) {
+					// Multiple windows/tabs allowed
+					window.open(url, "_blank");
+				} else {
+					// Single reusable popup window
+					window.open(
+						url,
+						"pdfWindow",
+						"width=900,height=1100,resizable=yes,scrollbars=yes,noopener,noreferrer"
+					);
+				}
+
             });
 
             resultDiv.appendChild(pdfBtn);
@@ -162,20 +399,11 @@ export function renderResults(results, elapsed = 0) {
             resultDiv.appendChild(audioContainer);
         }
 
-        // --------------------------------------------------------
-        // SNIPPET BLOCK (fixed toggle)
-        // --------------------------------------------------------
-
+        // Snippets
         let snippets = [];
 
-        if (Array.isArray(rec.snippets) && rec.snippets.length > 0) {
-            snippets = rec.snippets;
-        } else if (rec.full_text) {
-            const chunkSize = 200;
-            for (let i = 0; i < rec.full_text.length; i += chunkSize) {
-                snippets.push(rec.full_text.slice(i, i + chunkSize));
-                if (snippets.length >= 10) break;
-            }
+        if (rec.full_text && parsedQuery) {
+            snippets = extractQueryAwareSnippets(rec.full_text, parsedQuery, 3);
         }
 
         const snippetContainer = document.createElement("div");
@@ -185,7 +413,7 @@ export function renderResults(results, elapsed = 0) {
         initialSnippets.forEach(sn => {
             const snDiv = document.createElement("div");
             snDiv.className = "snippet";
-            snDiv.textContent = sn + "…";
+            snDiv.innerHTML = highlightMatches(sn, parsedQuery);
             snippetContainer.appendChild(snDiv);
         });
 
@@ -207,7 +435,7 @@ export function renderResults(results, elapsed = 0) {
                 toShow.forEach(sn => {
                     const snDiv = document.createElement("div");
                     snDiv.className = "snippet";
-                    snDiv.textContent = sn + "…";
+                    snDiv.innerHTML = highlightMatches(sn, parsedQuery);
                     snippetContainer.appendChild(snDiv);
                 });
 
@@ -227,9 +455,10 @@ export function renderResults(results, elapsed = 0) {
 // Wiring / Initialization
 // ------------------------------------------------------------
 document.addEventListener("DOMContentLoaded", async () => {
-
     await loadIndex();
+    loadHistoryFromStorage();
     populateNeighborhoodDropdown();
+    populateHistoryDropdown();
 
     const queryInput = document.getElementById("query");
     const searchBtn = document.getElementById("searchBtn");
@@ -238,37 +467,36 @@ document.addEventListener("DOMContentLoaded", async () => {
     const helpBtn = document.getElementById("helpBtn");
     const helpModal = document.getElementById("helpModal");
     const closeHelp = document.getElementById("closeHelp");
+    const clearHistoryBtn = document.getElementById("clearHistoryBtn");
 
-    // Search button
-    searchBtn.addEventListener("click", () => {
-        const { results, elapsed } = runSearch(queryInput.value, INDEX);
-        renderResults(results, elapsed);
-    });
+    function runAndRender() {
+        const query = queryInput.value;
+        const { results, elapsed, parsed } = runSearch(query, INDEX);
+        renderResults(results, elapsed, parsed);
+        addToSearchHistory(query);
+    }
 
-    // Enter key
+    searchBtn.addEventListener("click", runAndRender);
+
     queryInput.addEventListener("keydown", (e) => {
-        if (e.key === "Enter") {
-            const { results, elapsed } = runSearch(queryInput.value, INDEX);
-            renderResults(results, elapsed);
-        }
+        if (e.key === "Enter") runAndRender();
     });
 
-    // Neighborhood filter
-    neighborhoodFilter.addEventListener("change", () => {
-        const { results, elapsed } = runSearch(queryInput.value, INDEX);
-        renderResults(results, elapsed);
-    });
+    neighborhoodFilter.addEventListener("change", runAndRender);
 
-    // History dropdown
     historyDropdown.addEventListener("change", () => {
         if (historyDropdown.value) {
             queryInput.value = historyDropdown.value;
-            const { results, elapsed } = runSearch(queryInput.value, INDEX);
-            renderResults(results, elapsed);
+            runAndRender();
         }
     });
 
-    // Help modal
+    if (clearHistoryBtn) {
+        clearHistoryBtn.addEventListener("click", () => {
+            clearSearchHistory();
+        });
+    }
+
     helpBtn.addEventListener("click", () => {
         helpModal.style.display = "block";
     });
