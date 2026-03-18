@@ -164,11 +164,28 @@ function matchesRecord(rec, parsed) {
         if (!text.includes(phrase)) return false;
     }
 
-    for (const group of parsed.orGroups) {
-        const ok = group.some(term => wordSet.has(term));
-        if (!ok) return false;
+for (const group of parsed.orGroups) {
+    let ok = false;
+
+    for (const term of group) {
+        if (term.includes(" ")) {
+            // Phrase match
+            if (text.includes(term)) {
+                ok = true;
+                break;
+            }
+        } else {
+            // Whole-word match
+            const regex = new RegExp(`\\b${term.replace(/[.*+?^${}()|[\]\\]/g, "\\$&")}\\b`, "i");
+            if (regex.test(text)) {
+                ok = true;
+                break;
+            }
+        }
     }
 
+    if (!ok) return false;
+}
     for (const term of parsed.excluded) {
         if (wordSet.has(term)) return false;
     }
