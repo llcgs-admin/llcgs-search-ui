@@ -102,97 +102,174 @@ function populateNeighborhoodDropdown() {
     });
 }
 
+
+function escapeRegex(str) {
+    return str.replace(/[.*+?^${}()|[\]\\]/g, "\\$&");
+}
+
 // ------------------------------------------------------------
 // Boolean Query Parser (whole‑word matching)
 // ------------------------------------------------------------
-function parseQuery(q) {
+function parseQuery(query) {
+    const original = query;
+    let working = query;
+
     const phrases = [];
     const orGroups = [];
-    const excluded = [];
     const required = [];
+    const excluded = [];
 
-    let working = q.toLowerCase();
+    // 1) Extract OR groups first (so phrases inside them are OR-only)
+    const orGroupPlaceholders = [];
+    working = working.replace(/\(([^)]+)\)/g, (match, inner) => {
+        const groupPhrases = [];
+        let innerWorking = inner;
 
-    const phraseRegex = /"([^"]+)"/g;
-    working = working.replace(phraseRegex, (_, p) => {
-        const phrase = p.trim();
-        if (phrase) phrases.push(phrase);
-        return " ";
-    });
+        // Extract phrases inside this OR group
+        innerWorking = innerWorking.replace(/"([^"]+)"/g, (m, p) => {
+            const phrase = p.trim();
+            if (phrase) {
+                groupPhrases.push(phrase);
+            }
+            return " ";
+        });
 
-    const orRegex = /\(([^)]+)\)/g;
-    working = working.replace(orRegex, (_, group) => {
-        const terms = group
+        // Split on OR
+        const parts = innerWorking
             .split(/\s+or\s+/i)
-            .map(t => t.trim())
+            .map(s => s.trim())
             .filter(Boolean);
-        if (terms.length > 0) orGroups.push(terms);
+
+        const group = [];
+
+        // Add phrases from this group
+        for (const ph of groupPhrases) {
+            group.push({ type: "phrase", value: ph });
+        }
+
+        // Add single-word terms from this group
+        for (const part of parts) {
+            if (!part) continue;
+            // Ignore leading '-' here; NOT inside OR is not supported in this simple model
+            const cleaned = part.replace(/^-+/, "").trim();
+            if (!cleaned) continue;
+            group.push({ type: "word", value: cleaned.toLowerCase() });
+        }
+
+        if (group.length > 0) {
+            const idx = orGroups.length;
+            orGroups.push(group);
+            const placeholder = `__OR_GROUP_${idx}__`;
+            orGroupPlaceholders.push(placeholder);
+            return placeholder;
+        }
+
+        // If nothing valid, drop the group entirely
         return " ";
     });
 
-    const notRegex = /-(\w+)/g;
-    working = working.replace(notRegex, (_, term) => {
-        const t = term.trim();
-        if (t) excluded.push(t);
+    // 2) Extract global phrases (outside OR groups)
+    working = working.replace(/"([^"]+)"/g, (match, p) => {
+        const phrase = p.trim();
+        if (phrase) {
+            phrases.push(phrase);
+        }
         return " ";
     });
 
-    const reqTerms = working.match(/\b[\p{L}\p{N}']+\b/gu) || [];
-    reqTerms.forEach(t => {
-        const term = t.trim();
-        if (term) required.push(term);
-    });
+    // 3) Tokenize remaining text
+    const tokens = working
+        .split(/\s+/)
+        .map(t => t.trim())
+        .filter(Boolean);
 
-    return { phrases, orGroups, excluded, required };
-}
+    for (const token of tokens) {
+        if (!token) continue;
 
-// ------------------------------------------------------------
-// Record Matcher (whole‑word logic)
-// ------------------------------------------------------------
-function matchesRecord(rec, parsed) {
-    const text = rec.full_text?.toLowerCase() || "";
-    if (!text) return false;
+        // Skip OR placeholders (already handled)
+        if (/^__OR_GROUP_\d+__$/.test(token)) {
+            continue;
+        }
 
-    const words = text.match(/\b[\p{L}\p{N}']+\b/gu) || [];
-    const wordSet = new Set(words);
-
-    for (const term of parsed.required) {
-        if (!wordSet.has(term)) return false;
-    }
-
-    for (const phrase of parsed.phrases) {
-        if (!text.includes(phrase)) return false;
-    }
-
-for (const group of parsed.orGroups) {
-    let ok = false;
-
-    for (const term of group) {
-        if (term.includes(" ")) {
-            // Phrase match
-            if (text.includes(term)) {
-                ok = true;
-                break;
+        if (token.startsWith("-")) {
+            const term = token.slice(1).trim().toLowerCase();
+            if (term) {
+                excluded.push(term);
             }
         } else {
-            // Whole-word match
-            const regex = new RegExp(`\\b${term.replace(/[.*+?^${}()|[\]\\]/g, "\\$&")}\\b`, "i");
-            if (regex.test(text)) {
-                ok = true;
-                break;
-            }
+            required.push(token.toLowerCase());
         }
     }
 
-    if (!ok) return false;
+    return {
+        original,
+        phrases,   // phrases that are truly required (not inside OR)
+        orGroups,  // array of groups; each group is [{type, value}, ...]
+        required,  // single-word required terms
+        excluded   // single-word NOT terms
+    };
 }
+// ------------------------------------------------------------
+// Record Matcher (whole‑word logic)
+// ------------------------------------------------------------
+function matchesRecord(record, parsed) {
+    const text = (record.text || "").toLowerCase();
+
+    // Build a word set for quick membership checks
+    const words = text.match(/\b[\p{L}\p{N}']+\b/gu) || [];
+    const wordSet = new Set(words.map(w => w.toLowerCase()));
+
+    // 1) Excluded terms (NOT)
     for (const term of parsed.excluded) {
-        if (wordSet.has(term)) return false;
+        const regex = new RegExp(`\\b${escapeRegex(term)}\\b`, "i");
+        if (regex.test(text)) {
+            return false;
+        }
+    }
+
+    // 2) Required single-word terms
+    for (const term of parsed.required) {
+        const regex = new RegExp(`\\b${escapeRegex(term)}\\b`, "i");
+        if (!regex.test(text)) {
+            return false;
+        }
+    }
+
+    // 3) Required phrases (outside OR groups)
+    for (const phrase of parsed.phrases) {
+        if (!text.includes(phrase.toLowerCase())) {
+            return false;
+        }
+    }
+
+    // 4) OR groups (each group: at least one term must match)
+    for (const group of parsed.orGroups) {
+        let ok = false;
+
+        for (const item of group) {
+            if (item.type === "phrase") {
+                const phrase = item.value.toLowerCase();
+                if (text.includes(phrase)) {
+                    ok = true;
+                    break;
+                }
+            } else if (item.type === "word") {
+                const term = item.value.toLowerCase();
+                const regex = new RegExp(`\\b${escapeRegex(term)}\\b`, "i");
+                if (regex.test(text)) {
+                    ok = true;
+                    break;
+                }
+            }
+        }
+
+        if (!ok) {
+            return false;
+        }
     }
 
     return true;
 }
-
 // ------------------------------------------------------------
 // Query‑aware snippet extraction
 // ------------------------------------------------------------
