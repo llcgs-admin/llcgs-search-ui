@@ -267,67 +267,91 @@ function matchesRecord(record, parsed) {
     }
 
     return true;
-}// ------------------------------------------------------------
-// Query‑aware snippet extraction
-// ------------------------------------------------------------
-function extractQueryAwareSnippets(fullText, tokens, maxSnippets = 3) {
-    if (!fullText) return [];
+}
 
-    const text = fullText.toLowerCase();
+// ------------------------------------------------------------
+// Query‑aware snippet extraction WITH PAGE NUMBERS
+// ------------------------------------------------------------
+function extractQueryAwareSnippets(rec, tokens, maxSnippets = 3) {
+    if (!rec || !rec.pages || rec.pages.length === 0) return [];
+
     const snippets = [];
     const windowSize = 120;
 
-//  const tokens = new Set();
-//  parsed.required.forEach(t => tokens.add(t));
-//  parsed.phrases.forEach(p => tokens.add(p));
-//  parsed.orGroups.forEach(group => group.forEach(t => tokens.add(t)));
+    // Normalize tokens
+    const loweredTokens = tokens.map(t => t.toLowerCase());
 
-    const positions = [];
+    // Loop through pages
+    rec.pages.forEach((pageText, pageIndex) => {
+        if (snippets.length >= maxSnippets) return;
 
-    for (const token of tokens) {
-        if (!token) continue;
+        const lowerPage = pageText.toLowerCase();
 
-        if (token.includes(" ")) {
-            let idx = text.indexOf(token);
-            while (idx !== -1) {
-                positions.push(idx);
-                idx = text.indexOf(token, idx + 1);
-            }
-        } else {
-            const regex = new RegExp(`\\b${token}\\b`, "gi");
-            let match;
-            while ((match = regex.exec(fullText)) !== null) {
-                positions.push(match.index);
+        // Find match positions inside this page
+        const positions = [];
+
+        for (const token of loweredTokens) {
+            if (!token) continue;
+
+            if (token.includes(" ")) {
+                // Phrase search
+                let idx = lowerPage.indexOf(token);
+                while (idx !== -1) {
+                    positions.push(idx);
+                    idx = lowerPage.indexOf(token, idx + 1);
+                }
+            } else {
+                // Whole-word search
+                const regex = new RegExp(`\\b${token}\\b`, "gi");
+                let match;
+                while ((match = regex.exec(pageText)) !== null) {
+                    positions.push(match.index);
+                }
             }
         }
-    }
 
-    if (positions.length === 0) {
+        if (positions.length === 0) return;
+
+        // Sort match positions
+        positions.sort((a, b) => a - b);
+
+        // Extract snippets for this page
+        for (const pos of positions) {
+            if (snippets.length >= maxSnippets) break;
+
+            const start = Math.max(0, pos - windowSize);
+            const end = Math.min(pageText.length, pos + windowSize);
+
+            let snippet = pageText.slice(start, end).trim();
+            if (start > 0) snippet = "…" + snippet;
+            if (end < pageText.length) snippet = snippet + "…";
+
+            snippets.push({
+                page: pageIndex + 1,
+                text: snippet
+            });
+        }
+    });
+
+    // Fallback: no matches anywhere
+    if (snippets.length === 0) {
+        const fallback = [];
         const chunkSize = 200;
-        for (let i = 0; i < fullText.length && snippets.length < maxSnippets; i += chunkSize) {
-            snippets.push(fullText.slice(i, i + chunkSize));
-        }
-        return snippets;
-    }
 
-    positions.sort((a, b) => a - b);
+        rec.pages.forEach((pageText, pageIndex) => {
+            if (fallback.length >= maxSnippets) return;
 
-    for (const pos of positions) {
-        if (snippets.length >= maxSnippets) break;
+            fallback.push({
+                page: pageIndex + 1,
+                text: pageText.slice(0, chunkSize)
+            });
+        });
 
-        const start = Math.max(0, pos - windowSize);
-        const end = Math.min(fullText.length, pos + windowSize);
-
-        let snippet = fullText.slice(start, end).trim();
-        if (start > 0) snippet = "…" + snippet;
-        if (end < fullText.length) snippet = snippet + "…";
-
-        snippets.push(snippet);
+        return fallback;
     }
 
     return snippets;
 }
-
 // ------------------------------------------------------------
 // Run search
 // ------------------------------------------------------------
@@ -503,7 +527,7 @@ export function renderResults(results, elapsed = 0, parsedQuery = null) {
 
         if (rec.full_text && parsedQuery) {
             const snippetTokens = buildSnippetTokens(parsedQuery);
-			snippets = extractQueryAwareSnippets(rec.full_text, snippetTokens, 3);
+			snippets = extractQueryAwareSnippets(rec, snippetTokens, 3);
         }
 
         const snippetContainer = document.createElement("div");
