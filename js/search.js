@@ -456,7 +456,9 @@ export function renderResults(results, elapsed = 0, parsedQuery = null) {
         title.textContent = rec.id;
         resultDiv.appendChild(title);
 
+        // ------------------------------------------------------------
         // PDF button
+        // ------------------------------------------------------------
         if (rec.file_id) {
             const pdfBtn = document.createElement("button");
             pdfBtn.className = "pdf-button";
@@ -466,27 +468,26 @@ export function renderResults(results, elapsed = 0, parsedQuery = null) {
                 const usePreview = document.getElementById("usePreviewToggle")?.checked;
                 const allowMulti = document.getElementById("multiPopupToggle")?.checked;
 
-				const base = `https://drive.google.com/file/d/${rec.file_id}`;
-				const url = usePreview ? `${base}/preview` : `${base}/view`;
+                const base = `https://drive.google.com/file/d/${rec.file_id}`;
+                const url = usePreview ? `${base}/preview` : `${base}/view`;
 
-				if (allowMulti) {
-					// Multiple windows/tabs allowed
-					window.open(url, "_blank");
-				} else {
-					// Single reusable popup window
-					window.open(
-						url,
-						"pdfWindow",
-						"width=900,height=1100,resizable=yes,scrollbars=yes,noopener,noreferrer"
-					);
-				}
-
+                if (allowMulti) {
+                    window.open(url, "_blank");
+                } else {
+                    window.open(
+                        url,
+                        "pdfWindow",
+                        "width=900,height=1100,resizable=yes,scrollbars=yes,noopener,noreferrer"
+                    );
+                }
             });
 
             resultDiv.appendChild(pdfBtn);
         }
 
+        // ------------------------------------------------------------
         // Audio button
+        // ------------------------------------------------------------
         if (rec.audioId) {
             const audioBtn = document.createElement("button");
             audioBtn.className = "audio-button";
@@ -522,12 +523,14 @@ export function renderResults(results, elapsed = 0, parsedQuery = null) {
             resultDiv.appendChild(audioContainer);
         }
 
+        // ------------------------------------------------------------
         // Snippets
+        // ------------------------------------------------------------
         let snippets = [];
 
         if (rec.full_text && parsedQuery) {
             const snippetTokens = buildSnippetTokens(parsedQuery);
-			snippets = extractQueryAwareSnippets(rec, snippetTokens, 3);
+            snippets = extractQueryAwareSnippets(rec, snippetTokens, 3);
         }
 
         const snippetContainer = document.createElement("div");
@@ -537,7 +540,17 @@ export function renderResults(results, elapsed = 0, parsedQuery = null) {
         initialSnippets.forEach(sn => {
             const snDiv = document.createElement("div");
             snDiv.className = "snippet";
-            snDiv.innerHTML = highlightMatches(sn, parsedQuery);
+
+            const pageDiv = document.createElement("div");
+            pageDiv.className = "snippet-page";
+            pageDiv.textContent = `Page ${sn.page}`;
+
+            const textDiv = document.createElement("div");
+            textDiv.className = "snippet-text";
+            textDiv.innerHTML = highlightMatches(sn.text, parsedQuery);
+
+            snDiv.appendChild(pageDiv);
+            snDiv.appendChild(textDiv);
             snippetContainer.appendChild(snDiv);
         });
 
@@ -559,7 +572,17 @@ export function renderResults(results, elapsed = 0, parsedQuery = null) {
                 toShow.forEach(sn => {
                     const snDiv = document.createElement("div");
                     snDiv.className = "snippet";
-                    snDiv.innerHTML = highlightMatches(sn, parsedQuery);
+
+                    const pageDiv = document.createElement("div");
+                    pageDiv.className = "snippet-page";
+                    pageDiv.textContent = `Page ${sn.page}`;
+
+                    const textDiv = document.createElement("div");
+                    textDiv.className = "snippet-text";
+                    textDiv.innerHTML = highlightMatches(sn.text, parsedQuery);
+
+                    snDiv.appendChild(pageDiv);
+                    snDiv.appendChild(textDiv);
                     snippetContainer.appendChild(snDiv);
                 });
 
@@ -572,8 +595,8 @@ export function renderResults(results, elapsed = 0, parsedQuery = null) {
         }
 
         container.appendChild(resultDiv);
-    });
-}
+    }); // <-- correctly closes forEach
+} // <-- correctly closes renderResults()
 
 // ------------------------------------------------------------
 // Wiring / Initialization
@@ -621,25 +644,16 @@ document.addEventListener("DOMContentLoaded", async () => {
         });
     }
 
-    // ------------------------------------------------------------
-    // Version loader — now correctly inside the main DOMContentLoaded
-    // ------------------------------------------------------------
-    console.log("Version loader running…");
-
+    // Version loader
     fetch("version.json")
-        .then(r => {
-            console.log("Fetch response:", r);
-            return r.json();
-        })
+        .then(r => r.json())
         .then(meta => {
-            console.log("Parsed JSON:", meta);
             const el = document.getElementById("version-footer");
             if (el) {
                 el.textContent = `Build ${meta.version} — ${meta.build}`;
             }
         })
-        .catch(err => {
-            console.error("Version loader error:", err);
+        .catch(() => {
             const el = document.getElementById("version-footer");
             if (el) {
                 el.textContent = "Build info unavailable";
