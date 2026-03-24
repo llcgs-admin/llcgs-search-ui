@@ -267,67 +267,91 @@ function matchesRecord(record, parsed) {
     }
 
     return true;
-}// ------------------------------------------------------------
-// Query‑aware snippet extraction
-// ------------------------------------------------------------
-function extractQueryAwareSnippets(fullText, tokens, maxSnippets = 3) {
-    if (!fullText) return [];
+}
 
-    const text = fullText.toLowerCase();
+// ------------------------------------------------------------
+// Query‑aware snippet extraction WITH PAGE NUMBERS
+// ------------------------------------------------------------
+function extractQueryAwareSnippets(rec, tokens, maxSnippets = 3) {
+    if (!rec || !rec.pages || rec.pages.length === 0) return [];
+
     const snippets = [];
     const windowSize = 120;
 
-//  const tokens = new Set();
-//  parsed.required.forEach(t => tokens.add(t));
-//  parsed.phrases.forEach(p => tokens.add(p));
-//  parsed.orGroups.forEach(group => group.forEach(t => tokens.add(t)));
+    // Normalize tokens
+    const loweredTokens = tokens.map(t => t.toLowerCase());
 
-    const positions = [];
+    // Loop through pages
+    rec.pages.forEach((pageText, pageIndex) => {
+        if (snippets.length >= maxSnippets) return;
 
-    for (const token of tokens) {
-        if (!token) continue;
+        const lowerPage = pageText.toLowerCase();
 
-        if (token.includes(" ")) {
-            let idx = text.indexOf(token);
-            while (idx !== -1) {
-                positions.push(idx);
-                idx = text.indexOf(token, idx + 1);
-            }
-        } else {
-            const regex = new RegExp(`\\b${token}\\b`, "gi");
-            let match;
-            while ((match = regex.exec(fullText)) !== null) {
-                positions.push(match.index);
+        // Find match positions inside this page
+        const positions = [];
+
+        for (const token of loweredTokens) {
+            if (!token) continue;
+
+            if (token.includes(" ")) {
+                // Phrase search
+                let idx = lowerPage.indexOf(token);
+                while (idx !== -1) {
+                    positions.push(idx);
+                    idx = lowerPage.indexOf(token, idx + 1);
+                }
+            } else {
+                // Whole-word search
+                const regex = new RegExp(`\\b${token}\\b`, "gi");
+                let match;
+                while ((match = regex.exec(pageText)) !== null) {
+                    positions.push(match.index);
+                }
             }
         }
-    }
 
-    if (positions.length === 0) {
+        if (positions.length === 0) return;
+
+        // Sort match positions
+        positions.sort((a, b) => a - b);
+
+        // Extract snippets for this page
+        for (const pos of positions) {
+            if (snippets.length >= maxSnippets) break;
+
+            const start = Math.max(0, pos - windowSize);
+            const end = Math.min(pageText.length, pos + windowSize);
+
+            let snippet = pageText.slice(start, end).trim();
+            if (start > 0) snippet = "…" + snippet;
+            if (end < pageText.length) snippet = snippet + "…";
+
+            snippets.push({
+                page: pageIndex + 1,
+                text: snippet
+            });
+        }
+    });
+
+    // Fallback: no matches anywhere
+    if (snippets.length === 0) {
+        const fallback = [];
         const chunkSize = 200;
-        for (let i = 0; i < fullText.length && snippets.length < maxSnippets; i += chunkSize) {
-            snippets.push(fullText.slice(i, i + chunkSize));
-        }
-        return snippets;
-    }
 
-    positions.sort((a, b) => a - b);
+        rec.pages.forEach((pageText, pageIndex) => {
+            if (fallback.length >= maxSnippets) return;
 
-    for (const pos of positions) {
-        if (snippets.length >= maxSnippets) break;
+            fallback.push({
+                page: pageIndex + 1,
+                text: pageText.slice(0, chunkSize)
+            });
+        });
 
-        const start = Math.max(0, pos - windowSize);
-        const end = Math.min(fullText.length, pos + windowSize);
-
-        let snippet = fullText.slice(start, end).trim();
-        if (start > 0) snippet = "…" + snippet;
-        if (end < fullText.length) snippet = snippet + "…";
-
-        snippets.push(snippet);
+        return fallback;
     }
 
     return snippets;
 }
-
 // ------------------------------------------------------------
 // Run search
 // ------------------------------------------------------------
@@ -432,7 +456,9 @@ export function renderResults(results, elapsed = 0, parsedQuery = null) {
         title.textContent = rec.id;
         resultDiv.appendChild(title);
 
+        // ------------------------------------------------------------
         // PDF button
+        // ------------------------------------------------------------
         if (rec.file_id) {
             const pdfBtn = document.createElement("button");
             pdfBtn.className = "pdf-button";
@@ -442,27 +468,26 @@ export function renderResults(results, elapsed = 0, parsedQuery = null) {
                 const usePreview = document.getElementById("usePreviewToggle")?.checked;
                 const allowMulti = document.getElementById("multiPopupToggle")?.checked;
 
-				const base = `https://drive.google.com/file/d/${rec.file_id}`;
-				const url = usePreview ? `${base}/preview` : `${base}/view`;
+                const base = `https://drive.google.com/file/d/${rec.file_id}`;
+                const url = usePreview ? `${base}/preview` : `${base}/view`;
 
-				if (allowMulti) {
-					// Multiple windows/tabs allowed
-					window.open(url, "_blank");
-				} else {
-					// Single reusable popup window
-					window.open(
-						url,
-						"pdfWindow",
-						"width=900,height=1100,resizable=yes,scrollbars=yes,noopener,noreferrer"
-					);
-				}
-
+                if (allowMulti) {
+                    window.open(url, "_blank");
+                } else {
+                    window.open(
+                        url,
+                        "pdfWindow",
+                        "width=900,height=1100,resizable=yes,scrollbars=yes,noopener,noreferrer"
+                    );
+                }
             });
 
             resultDiv.appendChild(pdfBtn);
         }
 
+        // ------------------------------------------------------------
         // Audio button
+        // ------------------------------------------------------------
         if (rec.audioId) {
             const audioBtn = document.createElement("button");
             audioBtn.className = "audio-button";
@@ -498,12 +523,14 @@ export function renderResults(results, elapsed = 0, parsedQuery = null) {
             resultDiv.appendChild(audioContainer);
         }
 
+        // ------------------------------------------------------------
         // Snippets
+        // ------------------------------------------------------------
         let snippets = [];
 
         if (rec.full_text && parsedQuery) {
             const snippetTokens = buildSnippetTokens(parsedQuery);
-			snippets = extractQueryAwareSnippets(rec.full_text, snippetTokens, 3);
+            snippets = extractQueryAwareSnippets(rec, snippetTokens, 3);
         }
 
         const snippetContainer = document.createElement("div");
@@ -513,7 +540,17 @@ export function renderResults(results, elapsed = 0, parsedQuery = null) {
         initialSnippets.forEach(sn => {
             const snDiv = document.createElement("div");
             snDiv.className = "snippet";
-            snDiv.innerHTML = highlightMatches(sn, parsedQuery);
+
+            const pageDiv = document.createElement("div");
+            pageDiv.className = "snippet-page";
+            pageDiv.textContent = `Page ${sn.page}`;
+
+            const textDiv = document.createElement("div");
+            textDiv.className = "snippet-text";
+            textDiv.innerHTML = highlightMatches(sn.text, parsedQuery);
+
+            snDiv.appendChild(pageDiv);
+            snDiv.appendChild(textDiv);
             snippetContainer.appendChild(snDiv);
         });
 
@@ -535,7 +572,17 @@ export function renderResults(results, elapsed = 0, parsedQuery = null) {
                 toShow.forEach(sn => {
                     const snDiv = document.createElement("div");
                     snDiv.className = "snippet";
-                    snDiv.innerHTML = highlightMatches(sn, parsedQuery);
+
+                    const pageDiv = document.createElement("div");
+                    pageDiv.className = "snippet-page";
+                    pageDiv.textContent = `Page ${sn.page}`;
+
+                    const textDiv = document.createElement("div");
+                    textDiv.className = "snippet-text";
+                    textDiv.innerHTML = highlightMatches(sn.text, parsedQuery);
+
+                    snDiv.appendChild(pageDiv);
+                    snDiv.appendChild(textDiv);
                     snippetContainer.appendChild(snDiv);
                 });
 
@@ -548,8 +595,8 @@ export function renderResults(results, elapsed = 0, parsedQuery = null) {
         }
 
         container.appendChild(resultDiv);
-    });
-}
+    }); // <-- correctly closes forEach
+} // <-- correctly closes renderResults()
 
 // ------------------------------------------------------------
 // Wiring / Initialization
@@ -597,25 +644,16 @@ document.addEventListener("DOMContentLoaded", async () => {
         });
     }
 
-    // ------------------------------------------------------------
-    // Version loader — now correctly inside the main DOMContentLoaded
-    // ------------------------------------------------------------
-    console.log("Version loader running…");
-
+    // Version loader
     fetch("version.json")
-        .then(r => {
-            console.log("Fetch response:", r);
-            return r.json();
-        })
+        .then(r => r.json())
         .then(meta => {
-            console.log("Parsed JSON:", meta);
             const el = document.getElementById("version-footer");
             if (el) {
                 el.textContent = `Build ${meta.version} — ${meta.build}`;
             }
         })
-        .catch(err => {
-            console.error("Version loader error:", err);
+        .catch(() => {
             const el = document.getElementById("version-footer");
             if (el) {
                 el.textContent = "Build info unavailable";
